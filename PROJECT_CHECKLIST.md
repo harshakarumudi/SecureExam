@@ -80,21 +80,21 @@ Status Key:
 ---
 
 ## D. Security Controls
-- [ ] Password hashing via Argon2id / bcrypt
-- [ ] Password strength enforcement (length, casing, digits, special characters)
-- [ ] Generic authentication error messages (prevent user enumeration)
-- [ ] Session / JWT token expiry and secure handling
-- [ ] Server-side RBAC (Student, Faculty, Admin)
-- [ ] Object-level authorization / BOLA / IDOR protection
-- [ ] Authoritative server-side exam timer (expiry rejection)
-- [ ] Server-side score evaluation (tamper-proof)
-- [ ] Pydantic v2 strict input validation and sanitization
-- [ ] SQL injection defense via SQLAlchemy ORM parameterized queries
-- [ ] XSS protection (HTML sanitization and modern React escaping)
-- [ ] Security headers (CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, HSTS)
-- [ ] Secure CORS policy
+- [x] Password hashing via Argon2id / bcrypt
+- [x] Password strength enforcement (length, casing, digits, special characters)
+- [x] Generic authentication error messages (prevent user enumeration)
+- [x] Session / JWT token expiry and secure handling
+- [x] Server-side RBAC (Student, Faculty, Admin)
+- [x] Object-level authorization / BOLA / IDOR protection
+- [x] Authoritative server-side exam timer (expiry rejection)
+- [x] Server-side score evaluation (tamper-proof)
+- [x] Pydantic v2 strict input validation and sanitization
+- [x] SQL injection defense via SQLAlchemy ORM parameterized queries
+- [x] XSS protection (HTML sanitization and modern React escaping)
+- [x] Security headers (CSP, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, HSTS)
+- [x] Secure CORS policy
 - [ ] Rate limiting on authentication and sensitive endpoints
-- [ ] Tamper-evident audit logging for sensitive actions
+- [x] Tamper-evident audit logging for sensitive actions
 - [ ] No passwords, tokens, or secrets in logs or git
 
 ---
@@ -248,7 +248,7 @@ Status Key:
 - [ ] Requirements specification (`docs/requirements.md`)
 - [x] Use cases and diagrams (`docs/use-cases.md`, `diagrams/use-case.mmd`)
 - [ ] System architecture (`docs/architecture.md`)
-- [ ] Relational ER model (`diagrams/er-diagram.mmd`)
+- [x] Relational ER model (`diagrams/er-diagram.mmd`)
 - [ ] Security requirements specification (`docs/security-requirements.md`)
 
 ---
@@ -290,6 +290,7 @@ Status Key:
 - [ ] 100% automated tests passing
 - [ ] Documentation and diagrams perfectly match implementation
 - [ ] Quality gate passed
+
 
 
 

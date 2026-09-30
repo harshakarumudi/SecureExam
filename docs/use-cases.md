@@ -1,4 +1,4 @@
-﻿# SecureExam — Use Case Model and Detailed Specifications
+# SecureExam — Use Case Model and Detailed Specifications
 
 ## Document Information
 - **Project**: SecureExam — Secure Online Examination Management System

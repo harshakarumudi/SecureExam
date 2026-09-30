@@ -1,4 +1,4 @@
-﻿# SecureExam — System Architecture and Structural Design
+# SecureExam — System Architecture and Structural Design
 
 ## Document Information
 - **Project**: SecureExam — Secure Online Examination Management System

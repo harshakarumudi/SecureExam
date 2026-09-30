@@ -1,0 +1,101 @@
+erDiagram
+    %% Entity-Relationship Diagram - SecureExam Database
+
+    USERS {
+        int id PK "Autoincrement Primary Key"
+        string email UK "Unique Email Address"
+        string hashed_password "Argon2id Salted Hash"
+        string full_name "Full Name"
+        enum role "STUDENT, FACULTY, ADMIN"
+        boolean is_active "Account Active State"
+        datetime created_at "Account Creation Timestamp"
+        datetime updated_at "Account Update Timestamp"
+    }
+
+    EXAMS {
+        int id PK "Autoincrement Primary Key"
+        string title "Exam Title (Indexed)"
+        text description "Exam Description"
+        int duration_minutes "Authoritative Duration Limit"
+        float total_marks "Maximum Available Marks"
+        float passing_marks "Minimum Passing Marks"
+        enum status "DRAFT, PUBLISHED, CLOSED"
+        int created_by FK "Faculty ID (users.id)"
+        datetime start_time "Availability Start Window"
+        datetime end_time "Availability End Window"
+        datetime created_at "Creation Timestamp"
+        datetime updated_at "Last Modified Timestamp"
+    }
+
+    QUESTIONS {
+        int id PK "Autoincrement Primary Key"
+        int exam_id FK "Exam Reference (exams.id)"
+        text question_text "Sanitized Prompt Text"
+        float marks "Positive Marks for Correct Answer"
+        float negative_marks "Negative Penalty for Wrong Answer"
+        text explanation "Pedagogical Explanation"
+        int order_index "Sequential Display Index"
+    }
+
+    QUESTION_OPTIONS {
+        int id PK "Autoincrement Primary Key"
+        int question_id FK "Question Reference (questions.id)"
+        text option_text "Option Text (Choice)"
+        boolean is_correct "Correct Answer Flag (Hidden from Students)"
+        int order_index "Option Display Order"
+    }
+
+    EXAM_ATTEMPTS {
+        int id PK "Autoincrement Primary Key"
+        int student_id FK "Candidate ID (users.id)"
+        int exam_id FK "Exam ID (exams.id)"
+        datetime started_at "Authoritative Server Start Time"
+        datetime expires_at "Authoritative Server Expiration Deadline"
+        datetime submitted_at "Actual Submission Timestamp"
+        enum status "IN_PROGRESS, SUBMITTED, EXPIRED"
+    }
+
+    STUDENT_ANSWERS {
+        int id PK "Autoincrement Primary Key"
+        int attempt_id FK "Attempt Reference (exam_attempts.id)"
+        int question_id FK "Question Reference (questions.id)"
+        int selected_option_id FK "Selected Option (question_options.id)"
+        datetime recorded_at "Server Answer Timestamp"
+    }
+
+    RESULTS {
+        int id PK "Autoincrement Primary Key"
+        int attempt_id UK "Unique 1:1 Attempt Reference"
+        int student_id FK "Candidate Reference (users.id)"
+        int exam_id FK "Exam Reference (exams.id)"
+        float total_score "Server Evaluated Score"
+        float max_score "Maximum Possible Score"
+        float percentage "Final Score Percentage"
+        boolean passed "Pass/Fail Determination"
+        datetime evaluated_at "Timestamp of Evaluation & Sealing"
+    }
+
+    AUDIT_LOGS {
+        int id PK "Autoincrement Primary Key"
+        datetime timestamp "Event Timestamp (UTC, Indexed)"
+        int actor_id "User ID of Actor (Nullable)"
+        string actor_role "Role of Actor at Action Time"
+        string action "Event Identifier (Indexed)"
+        string resource_id "ID of Target Resource"
+        string ip_address "Origin IP Address"
+        string status "SUCCESS or FAILURE"
+        text details "Sanitized Non-Credential Metadata"
+    }
+
+    %% Relationships
+    USERS ||--o{ EXAMS : "creates (1:N)"
+    USERS ||--o{ EXAM_ATTEMPTS : "undertakes (1:N)"
+    USERS ||--o{ RESULTS : "earns (1:N)"
+    EXAMS ||--o{ QUESTIONS : "contains (1:N)"
+    EXAMS ||--o{ EXAM_ATTEMPTS : "targeted_by (1:N)"
+    EXAMS ||--o{ RESULTS : "assessed_in (1:N)"
+    QUESTIONS ||--o{ QUESTION_OPTIONS : "provides (1:N)"
+    QUESTIONS ||--o{ STUDENT_ANSWERS : "evaluated_via (1:N)"
+    EXAM_ATTEMPTS ||--o{ STUDENT_ANSWERS : "records (1:N)"
+    EXAM_ATTEMPTS ||--|| RESULTS : "evaluated_to (1:1)"
+    QUESTION_OPTIONS ||--o{ STUDENT_ANSWERS : "selected_in (1:N)"

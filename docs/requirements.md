@@ -1,4 +1,4 @@
-﻿# SecureExam — Software Requirements Specification (SRS)
+# SecureExam — Software Requirements Specification (SRS)
 
 ## Document Information
 - **Project**: SecureExam — Secure Online Examination Management System
