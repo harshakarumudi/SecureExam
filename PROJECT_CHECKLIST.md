@@ -21,16 +21,16 @@ Status Key:
 ---
 
 ## A. Requirements
-- [ ] Problem statement documented
-- [ ] Project objectives defined
-- [ ] Scope clearly established
-- [ ] Stakeholders and actors identified (Student, Faculty, Administrator)
-- [ ] Functional requirements enumerated
-- [ ] Non-functional requirements (Security, Performance, Availability, Usability, Maintainability, Privacy)
-- [ ] Deployment requirements and constraints documented
-- [ ] Assumptions and acceptance criteria specified
-- [ ] `docs/requirements.md` created
-- [ ] `backend/requirements.txt` created with pinned versions
+- [x] Problem statement documented
+- [x] Project objectives defined
+- [x] Scope clearly established
+- [x] Stakeholders and actors identified (Student, Faculty, Administrator)
+- [x] Functional requirements enumerated
+- [x] Non-functional requirements (Security, Performance, Availability, Usability, Maintainability, Privacy)
+- [x] Deployment requirements and constraints documented
+- [x] Assumptions and acceptance criteria specified
+- [x] `docs/requirements.md` created
+- [x] `backend/requirements.txt` created with pinned versions
 
 ---
 
@@ -290,3 +290,4 @@ Status Key:
 - [ ] 100% automated tests passing
 - [ ] Documentation and diagrams perfectly match implementation
 - [ ] Quality gate passed
+
