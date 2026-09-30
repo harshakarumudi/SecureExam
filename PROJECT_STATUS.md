@@ -5,8 +5,8 @@
 - **Institution**: Amrita School of Computing
 - **Course**: Secure Software Engineering
 - **Course Outcomes**: CO1, CO2, CO3, CO4
-- **Current Phase**: Phase 2 — System Model and Architecture (COMPLETED)
-- **Next Phase**: Phase 3 — Use Case Model
+- **Current Phase**: Phase 3 — Use Case Model (COMPLETED)
+- **Next Phase**: Phase 4 — Database and ER Model
 
 ---
 
@@ -29,7 +29,7 @@
 | **0** | Environment and Project Inspection | **[x] Completed** | 2026-09-30 | Initial chore commit |
 | **1** | Requirements Engineering | **[x] Completed** | 2026-09-30 | docs: define requirements engineering specification and backend dependencies |
 | **2** | System Model and Architecture | **[x] Completed** | 2026-09-30 | docs: define system architecture, module design, and structural diagrams |
-| **3** | Use Case Model | [ ] Not Started | Pending | - |
+| **3** | Use Case Model | **[x] Completed** | 2026-09-30 | docs: define comprehensive use case specifications and actor interaction diagram |
 | **4** | Database and ER Model | [ ] Not Started | Pending | - |
 | **5** | Technology Implementation | [ ] Not Started | Pending | - |
 | **6** | Authentication | [ ] Not Started | Pending | - |
@@ -55,5 +55,6 @@
 - Secrets checked: Zero credentials or private keys in repository
 - Configuration hygiene: `.gitignore` and `.env.example` in place
 - Working directory: Clean initial state
+
 
 

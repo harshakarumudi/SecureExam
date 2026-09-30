@@ -246,7 +246,7 @@ Status Key:
 ## V. Course Outcome 1 (CO1)
 *Develop secure system models depending on user requirements.*
 - [ ] Requirements specification (`docs/requirements.md`)
-- [ ] Use cases and diagrams (`docs/use-cases.md`, `diagrams/use-case.mmd`)
+- [x] Use cases and diagrams (`docs/use-cases.md`, `diagrams/use-case.mmd`)
 - [ ] System architecture (`docs/architecture.md`)
 - [ ] Relational ER model (`diagrams/er-diagram.mmd`)
 - [ ] Security requirements specification (`docs/security-requirements.md`)
@@ -290,5 +290,6 @@ Status Key:
 - [ ] 100% automated tests passing
 - [ ] Documentation and diagrams perfectly match implementation
 - [ ] Quality gate passed
+
 
 

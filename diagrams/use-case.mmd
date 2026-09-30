@@ -1,0 +1,99 @@
+﻿flowchart LR
+    %% Use Case Diagram - SecureExam System
+
+    subgraph Actors ["System Actors"]
+        Student["fa:fa-user Student\n(Candidate)"]
+        Faculty["fa:fa-chalkboard-teacher Faculty\n(Examiner)"]
+        Admin["fa:fa-user-shield Administrator\n(Auditor / Governance)"]
+        SysTimer["fa:fa-clock System Engine\n(Authoritative Evaluator)"]
+    end
+
+    subgraph Boundary ["SecureExam Platform Boundary"]
+        subgraph AuthUC ["Common & Authentication Subsystem"]
+            UC_Reg(["UC-01: Register Account"])
+            UC_Login(["UC-02: Authenticate (Login)"])
+            UC_Logout(["UC-03: Terminate Session (Logout)"])
+            UC_Profile(["UC-04: View & Manage Profile"])
+            UC_AuditLog(["UC-05: Record Audit Event"])
+        end
+
+        subgraph StudentUC ["Student Examination Subsystem"]
+            UC_BrowseExams(["UC-06: Browse Available Exams"])
+            UC_ViewInstructions(["UC-07: View Exam Instructions"])
+            UC_StartExam(["UC-08: Start Timed Attempt"])
+            UC_AnswerMCQ(["UC-09: Answer & Navigate MCQs"])
+            UC_SubmitExam(["UC-10: Submit Exam Attempt"])
+            UC_ViewResult(["UC-11: View Own Result & Score"])
+        end
+
+        subgraph FacultyUC ["Faculty Authoring Subsystem"]
+            UC_CreateExam(["UC-12: Create Examination"])
+            UC_EditExam(["UC-13: Edit Owned Exam"])
+            UC_ManageQuestions(["UC-14: Author & Edit MCQs"])
+            UC_PreviewExam(["UC-15: Preview Exam Paper"])
+            UC_PublishExam(["UC-16: Publish / Unpublish Exam"])
+            UC_ReviewSubmissions(["UC-17: View Candidate Submissions"])
+        end
+
+        subgraph AdminUC ["Administrative Governance Subsystem"]
+            UC_ManageUsers(["UC-18: Manage User Accounts"])
+            UC_AssignRoles(["UC-19: Assign & Change Roles"])
+            UC_ToggleUserStatus(["UC-20: Activate / Deactivate User"])
+            UC_ViewAuditLogs(["UC-21: Inspect Security Audit Logs"])
+            UC_OverseeExams(["UC-22: System-wide Exam Oversight"])
+        end
+
+        subgraph CoreSecurityUC ["Authoritative Automated Security Controls"]
+            UC_EnforceTimer(["UC-23: Authoritative Timer Enforcement"])
+            UC_AutoEval(["UC-24: Server-Side Score Evaluation"])
+            UC_OwnershipCheck(["UC-25: Object-Level Authorization Check"])
+        end
+    end
+
+    %% Student Connections
+    Student --> UC_Reg
+    Student --> UC_Login
+    Student --> UC_Logout
+    Student --> UC_Profile
+    Student --> UC_BrowseExams
+    Student --> UC_ViewInstructions
+    Student --> UC_StartExam
+    Student --> UC_AnswerMCQ
+    Student --> UC_SubmitExam
+    Student --> UC_ViewResult
+
+    %% Faculty Connections
+    Faculty --> UC_Login
+    Faculty --> UC_Logout
+    Faculty --> UC_Profile
+    Faculty --> UC_CreateExam
+    Faculty --> UC_EditExam
+    Faculty --> UC_ManageQuestions
+    Faculty --> UC_PreviewExam
+    Faculty --> UC_PublishExam
+    Faculty --> UC_ReviewSubmissions
+
+    %% Admin Connections
+    Admin --> UC_Login
+    Admin --> UC_Logout
+    Admin --> UC_Profile
+    Admin --> UC_ManageUsers
+    Admin --> UC_AssignRoles
+    Admin --> UC_ToggleUserStatus
+    Admin --> UC_ViewAuditLogs
+    Admin --> UC_OverseeExams
+
+    %% System Automated Engine Connections
+    SysTimer --> UC_EnforceTimer
+    SysTimer --> UC_AutoEval
+
+    %% Include & Extend Relationships
+    UC_StartExam -.->|includes| UC_EnforceTimer
+    UC_SubmitExam -.->|includes| UC_EnforceTimer
+    UC_SubmitExam -.->|includes| UC_AutoEval
+    UC_ViewResult -.->|includes| UC_OwnershipCheck
+    UC_EditExam -.->|includes| UC_OwnershipCheck
+    UC_CreateExam -.->|triggers| UC_AuditLog
+    UC_PublishExam -.->|triggers| UC_AuditLog
+    UC_SubmitExam -.->|triggers| UC_AuditLog
+    UC_AssignRoles -.->|triggers| UC_AuditLog
