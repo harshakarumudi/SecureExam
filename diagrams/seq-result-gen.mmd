@@ -1,0 +1,38 @@
+sequenceDiagram
+    autonumber
+    participant Svc as EvaluationService
+    participant Fact as EvaluationStrategyFactory
+    participant Strat as EvaluationStrategy
+    participant DB as Relational Database
+    participant Audit as AuditService
+
+    Note over Svc: Triggered after Passing Timer & Authorization Gates
+    Svc->>Fact: get_strategy(exam.enable_negative_marking)
+    Fact-->>Svc: Resolved Strategy Instance (Standard or NegativeMarking)
+
+    loop For each Question in Exam
+        Svc->>DB: Record StudentAnswer(attempt_id, question_id, selected_option_id)
+        Svc->>Strat: evaluate_question(question, selected_option_id)
+        Strat->>Strat: Query question.options (True Server is_correct flag)
+        alt Option is Correct
+            Strat-->>Svc: +question.marks
+        else Option is Incorrect
+            alt Negative Marking Enabled
+                Strat-->>Svc: -question.negative_marks
+            else Standard Mode
+                Strat-->>Svc: 0.0
+            end
+        else Question Unanswered
+            Strat-->>Svc: 0.0 (Zero penalty)
+        end
+        Svc->>Svc: Accumulate total_score += earned
+    end
+
+    Svc->>Svc: Apply Underflow Protection: total_score = max(0.0, total_score)
+    Svc->>Svc: Compute percentage = (total_score / max_score) * 100
+    Svc->>Svc: Compute passed = total_score >= exam.passing_marks
+    Svc->>DB: Update attempt.status = SUBMITTED, submitted_at = utcnow()
+    Svc->>DB: Insert sealed Result(total_score, max_score, percentage, passed)
+    DB-->>Svc: Persisted Sealed Result
+    Svc->>Audit: log_event("EVALUATION_COMPLETED", student_id, score, status="SUCCESS")
+    Svc-->>Client: ResultOut(total_score, max_score, percentage, passed)

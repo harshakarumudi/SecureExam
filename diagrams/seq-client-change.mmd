@@ -1,0 +1,34 @@
+sequenceDiagram
+    autonumber
+    actor Board as Examination Board (Client)
+    actor Faculty as Faculty Member
+    actor Student as Student Candidate
+    participant Svc as EvaluationService
+    participant Fact as EvaluationStrategyFactory
+    participant StratStd as StandardEvaluationStrategy
+    participant StratNeg as NegativeMarkingStrategy
+    participant DB as Persistence Layer
+
+    Note over Board: Client Change Request CR-2026-004 Submitted
+    Board->>Faculty: Mandate Negative Marking Option for Competitive Exams
+    Faculty->>DB: Create Exam with enable_negative_marking = true
+
+    Note over Student: Candidate Takes Competitive Exam
+    Student->>Svc: Submit Exam Answers: [Q1=Correct, Q2=Incorrect, Q3=Unanswered]
+    Svc->>DB: Check exam.enable_negative_marking
+    DB-->>Svc: enable_negative_marking == True
+
+    Svc->>Fact: get_strategy(True)
+    Fact-->>Svc: NegativeMarkingStrategy Instance
+
+    Svc->>StratNeg: evaluate_question(Q1, CorrectOption)
+    StratNeg-->>Svc: +5.0 Marks
+    Svc->>StratNeg: evaluate_question(Q2, IncorrectOption)
+    StratNeg-->>Svc: -1.5 Marks (Penalty Deducted)
+    Svc->>StratNeg: evaluate_question(Q3, None)
+    StratNeg-->>Svc: 0.0 Marks (Zero Penalty for Unanswered)
+
+    Svc->>Svc: Net Calculation: 5.0 - 1.5 + 0.0 = 3.5 Marks
+    Svc->>Svc: Floor check: max(0.0, 3.5) = 3.5
+    Svc->>DB: Seal Result Record (Score=3.5, Max=15.0)
+    Svc-->>Student: 200 OK (Grade Sealed Transparently)

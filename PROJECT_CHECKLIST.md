@@ -236,60 +236,60 @@ Status Key:
 ---
 
 ## U. Project Documentation
-- [ ] Complete `docs/` repository files
-- [ ] Traceability matrix linking requirements to design, threats, controls, and tests
-- [ ] Professional `README.md`
-- [ ] Academic Final Project Report (`docs/final-report.md`)
+- [x] Complete `docs/` repository files
+- [x] Traceability matrix linking requirements to design, threats, controls, and tests
+- [x] Professional `README.md`
+- [x] Academic Final Project Report (`docs/final-report.md`)
 
 ---
 
 ## V. Course Outcome 1 (CO1)
 *Develop secure system models depending on user requirements.*
-- [ ] Requirements specification (`docs/requirements.md`)
+- [x] Requirements specification (`docs/requirements.md`)
 - [x] Use cases and diagrams (`docs/use-cases.md`, `diagrams/use-case.mmd`)
-- [ ] System architecture (`docs/architecture.md`)
+- [x] System architecture (`docs/architecture.md`)
 - [x] Relational ER model (`diagrams/er-diagram.mmd`)
-- [ ] Security requirements specification (`docs/security-requirements.md`)
+- [x] Security requirements specification (`docs/security-requirements.md`)
 
 ---
 
 ## W. Course Outcome 2 (CO2)
 *Build analysis models and apply threat modeling.*
-- [ ] Data Flow Diagram (`diagrams/dfd.mmd`)
-- [ ] STRIDE Threat Model (`diagrams/stride-threat-model.mmd`, `docs/threat-model.md`)
-- [ ] Attack surface analysis and trust boundaries
-- [ ] 12+ scenario threat register with mitigations and test verification
+- [x] Data Flow Diagram (`diagrams/dfd.mmd`)
+- [x] STRIDE Threat Model (`diagrams/stride-threat-model.mmd`, `docs/threat-model.md`)
+- [x] Attack surface analysis and trust boundaries
+- [x] 12+ scenario threat register with mitigations and test verification
 
 ---
 
 ## X. Course Outcome 3 (CO3)
 *Understand software security economics and practices in containerized development.*
-- [ ] Hardened multi-stage Dockerfiles and unprivileged containers
-- [ ] Network segmentation in Docker Compose
-- [ ] Container security scanning
-- [ ] Software security economics analysis (`docs/security-economics.md`)
-- [ ] Cost/performance/security trade-off evaluations
+- [x] Hardened multi-stage Dockerfiles and unprivileged containers
+- [x] Network segmentation in Docker Compose
+- [x] Container security scanning
+- [x] Software security economics analysis (`docs/security-economics.md`)
+- [x] Cost/performance/security trade-off evaluations
 
 ---
 
 ## Y. Course Outcome 4 (CO4)
 *Develop security testing and understand governance, risk and compliance.*
-- [ ] Pytest unit, integration, and security exploit test suites
-- [ ] SonarQube static analysis and quality gates
-- [ ] Dependency vulnerability scanning
-- [ ] Risk register and governance models (`docs/governance.md`, `docs/risk-register.md`)
-- [ ] OWASP Top 10, ASVS, and NIST SSDF compliance mapping
-- [ ] Secure change management and refactoring validation
+- [x] Pytest unit, integration, and security exploit test suites
+- [x] SonarQube static analysis and quality gates
+- [x] Dependency vulnerability scanning
+- [x] Risk register and governance models (`docs/governance.md`, `docs/risk-register.md`)
+- [x] OWASP Top 10, ASVS, and NIST SSDF compliance mapping
+- [x] Secure change management and refactoring validation
 
 ---
 
 ## Z. Final Verification
-- [ ] Full application runs locally and in containers
-- [ ] Complete student, faculty, and admin user journeys verified
-- [ ] All security exploits verified blocked
-- [ ] 100% automated tests passing
-- [ ] Documentation and diagrams perfectly match implementation
-- [ ] Quality gate passed
+- [x] Full application runs locally and in containers
+- [x] Complete student, faculty, and admin user journeys verified
+- [x] All security exploits verified blocked
+- [x] 100% automated tests passing
+- [x] Documentation and diagrams perfectly match implementation
+- [x] Quality gate passed
 
 
 

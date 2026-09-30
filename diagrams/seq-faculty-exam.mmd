@@ -1,0 +1,42 @@
+sequenceDiagram
+    autonumber
+    actor Faculty as Faculty Examiner
+    participant API as Exams API (api/v1/exams.py)
+    participant Dep as Auth Dependencies (require_role)
+    participant Svc as ExamService (services/exam_service.py)
+    participant San as Input Sanitizer (core/sanitizer.py)
+    participant DB as Relational Database
+    participant Audit as AuditService
+
+    Faculty->>API: POST /api/v1/exams/ (title, duration, marks, enable_neg)
+    API->>Dep: require_role(FACULTY)
+    Dep-->>API: Authorized Faculty User
+    API->>Svc: create_exam(exam_in, creator=Faculty)
+    Svc->>San: sanitize_html(title, description)
+    San-->>Svc: Clean Text
+    Svc->>DB: Insert Exam(status=DRAFT, created_by=Faculty.id)
+    DB-->>Svc: Exam (ID=1)
+    Svc->>Audit: log_event("EXAM_CREATED", exam_id=1, status="SUCCESS")
+    Svc-->>API: 201 Created (Exam)
+
+    loop Question Banking
+        Faculty->>API: POST /api/v1/exams/1/questions (text, marks, neg_marks, options)
+        API->>Svc: add_question_to_exam(exam_id=1, q_in, user)
+        Svc->>Svc: Verify ownership (exam.created_by == Faculty.id)
+        Svc->>DB: Insert Question and QuestionOptions
+        DB-->>Svc: Question with Options
+        Svc-->>API: 201 Created (Question)
+    end
+
+    Faculty->>API: PUT /api/v1/exams/1 (status="PUBLISHED")
+    API->>Svc: update_exam(exam_id=1, status=PUBLISHED)
+    Svc->>DB: Update exam.status = PUBLISHED
+    Svc->>Audit: log_event("EXAM_PUBLISHED", exam_id=1)
+    Svc-->>API: 200 OK (Exam Live for Students)
+
+    Faculty->>API: GET /api/v1/results/exam/1
+    API->>Svc: Fetch Student Attempt Results
+    Svc->>Svc: Verify ownership (exam.created_by == Faculty.id)
+    Svc->>DB: Query Results with Student Names & Scores
+    DB-->>Svc: Detailed Results List
+    Svc-->>API: 200 OK (Student Gradebook)

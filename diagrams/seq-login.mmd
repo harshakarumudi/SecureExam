@@ -1,0 +1,39 @@
+sequenceDiagram
+    autonumber
+    actor Client as Candidate / Faculty Browser
+    participant WAF as Reverse Proxy & Rate Limiter
+    participant API as Auth Controller (api/v1/auth.py)
+    participant Svc as AuthService (services/auth_service.py)
+    participant Sec as Security Engine (core/security.py)
+    participant DB as Relational Database (users)
+    participant Audit as AuditService (services/audit_service.py)
+
+    Client->>WAF: POST /api/v1/auth/login (email, password)
+    WAF->>WAF: Check Sliding Window Rate Limit (5 req/min)
+    alt Rate Limit Exceeded
+        WAF-->>Client: 429 Too Many Requests (Retry-After)
+    else Rate Limit OK
+        WAF->>API: Forward Sanitized Request
+        API->>Svc: authenticate(email, password, ip)
+        Svc->>DB: Query User by Normalized Email
+        DB-->>Svc: User Record (or None)
+        alt User Not Found
+            Svc->>Sec: verify_password(dummy_hash) [Constant-Time]
+            Svc->>Audit: log_event("LOGIN_FAILED", IP, status="FAILURE")
+            Svc-->>API: 401 Unauthorized ("Invalid email or password")
+            API-->>Client: 401 Generic Error
+        else User Found
+            Svc->>Sec: verify_password(raw_password, user.hashed_password)
+            alt Password Incorrect
+                Svc->>Audit: log_event("LOGIN_FAILED", user.id, IP)
+                Svc-->>API: 401 Unauthorized ("Invalid email or password")
+                API-->>Client: 401 Generic Error
+            else Password Valid
+                Svc->>Sec: create_access_token(sub=str(user.id), role=user.role, exp=60m)
+                Sec-->>Svc: Signed JWT (HMAC-SHA256)
+                Svc->>Audit: log_event("LOGIN_SUCCESS", user.id, IP, status="SUCCESS")
+                Svc-->>API: TokenResponse(access_token, token_type="bearer", user)
+                API-->>Client: 200 OK + JWT Bearer Token
+            end
+        end
+    end

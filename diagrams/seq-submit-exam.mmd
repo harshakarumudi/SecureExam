@@ -1,0 +1,34 @@
+sequenceDiagram
+    autonumber
+    actor Student as Student Candidate
+    participant API as Attempts API (api/v1/attempts.py)
+    participant Svc as EvaluationService (services/evaluation_service.py)
+    participant DB as Relational Database
+    participant Audit as AuditService (services/audit_service.py)
+
+    Student->>API: POST /api/v1/attempts/{id}/submit (answers=[{q_id, opt_id}])
+    API->>Svc: evaluate_and_seal(attempt_id, submission, student, ip)
+    Svc->>DB: Query Attempt by ID (with Exam and Questions)
+    DB-->>Svc: Attempt Record
+
+    alt Attempt Not Found
+        Svc-->>API: 404 Not Found
+        API-->>Student: 404 Not Found
+    else BOLA / IDOR Violation (attempt.student_id != student.id)
+        Svc->>Audit: log_event("IDOR_SUBMIT_ATTEMPT_BLOCKED", actor=student.id, status="BLOCKED")
+        Svc-->>API: 403 Forbidden ("Access denied to this attempt.")
+        API-->>Student: 403 Forbidden
+    else Already Submitted (attempt.status == SUBMITTED)
+        Svc-->>API: 400 Bad Request ("Attempt has already been submitted.")
+        API-->>Student: 400 Bad Request
+    else Authoritative Server Clock Check
+        Svc->>Svc: Check server_now > attempt.expires_at + 15s grace
+        alt Exam Expired
+            Svc->>DB: Update attempt.status = EXPIRED
+            Svc->>Audit: log_event("ATTEMPT_EXPIRED_REJECTED", attempt_id, status="REJECTED")
+            Svc-->>API: 400 Bad Request ("Exam attempt has expired. Submission rejected.")
+            API-->>Student: 400 Bad Request (Late Submission Rejected)
+        else Within Authorized Window
+            Svc->>Svc: Proceed to Server-Side Grading Engine
+        end
+    end

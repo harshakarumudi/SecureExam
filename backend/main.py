@@ -1,18 +1,19 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
+from backend.app.api.v1.attempts import router as attempts_router
+from backend.app.api.v1.audit import router as audit_router
+from backend.app.api.v1.auth import router as auth_router
+from backend.app.api.v1.exams import router as exams_router
+from backend.app.api.v1.health import router as health_router
+from backend.app.api.v1.results import router as results_router
+from backend.app.api.v1.users import router as users_router
 from backend.app.core.config import settings
 from backend.app.db.init_db import init_db
-from backend.app.api.v1.health import router as health_router
-from backend.app.api.v1.auth import router as auth_router
-from backend.app.api.v1.users import router as users_router
-from backend.app.api.v1.exams import router as exams_router
-from backend.app.api.v1.attempts import router as attempts_router
-from backend.app.api.v1.results import router as results_router
-from backend.app.api.v1.audit import router as audit_router
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):

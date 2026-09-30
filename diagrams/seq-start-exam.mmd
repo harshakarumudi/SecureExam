@@ -1,0 +1,33 @@
+sequenceDiagram
+    autonumber
+    actor Student as Student Candidate
+    participant API as Attempts API (api/v1/attempts.py)
+    participant Dep as Auth Dependencies (api/deps.py)
+    participant Svc as AttemptService (services/attempt_service.py)
+    participant DB as Relational Persistence (PostgreSQL/SQLite)
+    participant Audit as AuditService (services/audit_service.py)
+
+    Student->>API: POST /api/v1/attempts/start/{exam_id} (Bearer JWT)
+    API->>Dep: get_current_user() & require_role(STUDENT)
+    Dep->>Dep: Validate JWT Signature, Check Expiration, Extract user_id
+    Dep-->>API: Authenticated Student Entity
+    API->>Svc: start_attempt(exam_id, student, ip)
+    Svc->>DB: Query Exam with Questions & Options
+    DB-->>Svc: Exam Record
+    alt Exam is DRAFT or CLOSED
+        Svc-->>API: 400 Bad Request ("Examination is not open for attempts")
+        API-->>Student: 400 Bad Request
+    else Exam is PUBLISHED
+        Svc->>DB: Check for Existing Unsubmitted Attempt
+        DB-->>Svc: Existing Attempt (or None)
+        alt Resuming Valid Active Attempt
+            Svc->>Svc: Calculate remaining_seconds = expires_at - server_now
+        else New Attempt
+            Svc->>Svc: Compute server-authoritative timestamps:<br/>started_at = utcnow()<br/>expires_at = started_at + exam.duration
+            Svc->>DB: Insert ExamAttempt(status=IN_PROGRESS, started_at, expires_at)
+            Svc->>Audit: log_event("ATTEMPT_STARTED", student.id, exam.id)
+        end
+        Svc->>Svc: Strip Confidential Keys (`is_correct`, `explanation`) from Options
+        Svc-->>API: AttemptStartResponse(attempt_id, remaining_seconds, sanitized_questions)
+        API-->>Student: 201 Created (Safe Candidate Payload)
+    end
