@@ -25,6 +25,7 @@ class ExamService:
             duration_minutes=exam_in.duration_minutes,
             total_marks=exam_in.total_marks,
             passing_marks=exam_in.passing_marks,
+            enable_negative_marking=exam_in.enable_negative_marking,
             status=ExamStatus.DRAFT,
             created_by=creator.id,
             start_time=exam_in.start_time,
@@ -118,6 +119,8 @@ class ExamService:
             exam.total_marks = exam_in.total_marks
         if exam_in.passing_marks is not None:
             exam.passing_marks = exam_in.passing_marks
+        if exam_in.enable_negative_marking is not None:
+            exam.enable_negative_marking = exam_in.enable_negative_marking
         if exam_in.status is not None:
             exam.status = exam_in.status
         if exam_in.start_time is not None:

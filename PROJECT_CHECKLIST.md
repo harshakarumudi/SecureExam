@@ -144,94 +144,94 @@ Status Key:
 ---
 
 ## I. Docker & Containerization
-- [ ] Multi-stage Dockerfile for FastAPI backend
-- [ ] Multi-stage Dockerfile for React/Vite frontend (NGINX unprivileged)
-- [ ] Non-root container execution (`appuser` UID 10001)
-- [ ] `docker-compose.yml` orchestrating Frontend, Backend, and PostgreSQL
-- [ ] Isolated Docker network (database not publicly bound)
-- [ ] Health checks configured for all services
-- [ ] Container security and hardening documented in `docs/container-security.md`
+- [x] Multi-stage Dockerfile for FastAPI backend
+- [x] Multi-stage Dockerfile for React/Vite frontend (NGINX unprivileged)
+- [x] Non-root container execution (`appuser` UID 10001)
+- [x] `docker-compose.yml` orchestrating Frontend, Backend, and PostgreSQL
+- [x] Isolated Docker network (database not publicly bound)
+- [x] Health checks configured for all services
+- [x] Container security and hardening documented in `docs/container-security.md`
 
 ---
 
 ## J. CI/CD
-- [ ] GitHub Actions workflow `.github/workflows/ci.yml`
-- [ ] Linting step (Ruff / ESLint)
-- [ ] Automated unit and integration test step
-- [ ] Static security and dependency audit step
-- [ ] Container build step
-- [ ] Pipeline failure enforcement on critical security flaws
+- [x] GitHub Actions workflow `.github/workflows/ci.yml`
+- [x] Linting step (Ruff / ESLint)
+- [x] Automated unit and integration test step
+- [x] Static security and dependency audit step
+- [x] Container build step
+- [x] Pipeline failure enforcement on critical security flaws
 
 ---
 
 ## K. Secure SDLC
-- [ ] Secure SDLC stages documented (Requirements -> Design -> Review -> Testing -> CI/CD -> Monitoring)
-- [ ] Security activities aligned to every stage in `docs/secure-sdlc.md`
+- [x] Secure SDLC stages documented (Requirements -> Design -> Review -> Testing -> CI/CD -> Monitoring)
+- [x] Security activities aligned to every stage in `docs/secure-sdlc.md`
 
 ---
 
 ## L. Security Economics
-- [ ] Security economics framework documented in `docs/security-economics.md`
-- [ ] Analysis of cost, runtime overhead, performance, and maintenance for each control
-- [ ] Trade-off matrix: Security vs. Cost vs. Performance vs. Complexity
+- [x] Security economics framework documented in `docs/security-economics.md`
+- [x] Analysis of cost, runtime overhead, performance, and maintenance for each control
+- [x] Trade-off matrix: Security vs. Cost vs. Performance vs. Complexity
 
 ---
 
 ## M. Security Governance
-- [ ] Security roles and responsibilities defined
-- [ ] Least privilege and access control policies established
-- [ ] Secure code review process documented
-- [ ] Incident response and vulnerability disclosure plan in `docs/governance.md`
+- [x] Security roles and responsibilities defined
+- [x] Least privilege and access control policies established
+- [x] Secure code review process documented
+- [x] Incident response and vulnerability disclosure plan in `docs/governance.md`
 
 ---
 
 ## N. Risk Management
-- [ ] Comprehensive Risk Register in `docs/risk-register.md`
-- [ ] Quantitative/qualitative likelihood and impact matrix
-- [ ] Residual risk tracking for all core assets
+- [x] Comprehensive Risk Register in `docs/risk-register.md`
+- [x] Quantitative/qualitative likelihood and impact matrix
+- [x] Residual risk tracking for all core assets
 
 ---
 
 ## O. Compliance & Framework Mapping
-- [ ] OWASP Top 10 (2021) alignment matrix
-- [ ] OWASP ASVS v4.0 verification controls mapped
-- [ ] NIST Secure Software Development Framework (SSDF) concepts mapped in `docs/compliance-mapping.md`
+- [x] OWASP Top 10 (2021) alignment matrix
+- [x] OWASP ASVS v4.0 verification controls mapped
+- [x] NIST Secure Software Development Framework (SSDF) concepts mapped in `docs/compliance-mapping.md`
 
 ---
 
 ## P. Module Dependency Analysis
-- [ ] Module coupling and cohesion analysis
-- [ ] Dependency graph documented in `diagrams/module-dependency.mmd`
-- [ ] Documentation created in `docs/dependency-analysis.md`
+- [x] Module coupling and cohesion analysis
+- [x] Dependency graph documented in `diagrams/module-dependency.mmd`
+- [x] Documentation created in `docs/dependency-analysis.md`
 
 ---
 
 ## Q. Dependency Reduction
-- [ ] Identification of tight coupling and duplicate dependencies
-- [ ] Architectural refactoring for dependency decoupling
-- [ ] Measured before vs. after coupling comparison in `docs/dependency-reduction.md`
+- [x] Identification of tight coupling and duplicate dependencies
+- [x] Architectural refactoring for dependency decoupling
+- [x] Measured before vs. after coupling comparison in `docs/dependency-reduction.md`
 
 ---
 
 ## R. Client Change Request (Negative Marking)
-- [ ] Formal Change Request recorded in `docs/client-change-request.md`
-- [ ] Threat model and security impact analysis updated
-- [ ] Backend evaluation logic updated: Correct = +marks, Incorrect = -negative_marks, Unanswered = 0
-- [ ] DB schema updated with migration
-- [ ] Automated tests written specifically validating negative marking logic
-- [ ] Regression testing completed
+- [x] Formal Change Request recorded in `docs/client-change-request.md`
+- [x] Threat model and security impact analysis updated
+- [x] Backend evaluation logic updated: Correct = +marks, Incorrect = -negative_marks, Unanswered = 0
+- [x] DB schema updated with migration
+- [x] Automated tests written specifically validating negative marking logic
+- [x] Regression testing completed
 
 ---
 
 ## S. Code Smells
-- [ ] Genuine code smells identified in initial implementation
-- [ ] Documented in `docs/code-smells-and-refactoring.md` with cyclomatic complexity and maintainability metrics
+- [x] Genuine code smells identified in initial implementation
+- [x] Documented in `docs/code-smells-and-refactoring.md` with cyclomatic complexity and maintainability metrics
 
 ---
 
 ## T. Refactoring
-- [ ] Refactoring executed to eliminate identified code smells
-- [ ] Before vs. After metrics demonstrated with zero regression
+- [x] Refactoring executed to eliminate identified code smells
+- [x] Before vs. After metrics demonstrated with zero regression
 
 ---
 

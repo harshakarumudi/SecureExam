@@ -12,6 +12,7 @@ class ExamBase(BaseModel):
     duration_minutes: int = Field(..., ge=1, le=360)
     total_marks: float = Field(default=100.0, ge=1.0)
     passing_marks: float = Field(default=40.0, ge=0.0)
+    enable_negative_marking: bool = False
     start_time: datetime | None = None
     end_time: datetime | None = None
 
@@ -26,6 +27,7 @@ class ExamUpdate(BaseModel):
     duration_minutes: int | None = Field(None, ge=1, le=360)
     total_marks: float | None = Field(None, ge=1.0)
     passing_marks: float | None = Field(None, ge=0.0)
+    enable_negative_marking: bool | None = None
     status: ExamStatus | None = None
     start_time: datetime | None = None
     end_time: datetime | None = None

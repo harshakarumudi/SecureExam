@@ -5,8 +5,8 @@
 - **Institution**: Amrita School of Computing
 - **Course**: Secure Software Engineering
 - **Course Outcomes**: CO1, CO2, CO3, CO4
-- **Current Phase**: Milestone 7 — DevSecOps, Client Change Request & Refactoring
-- **Next Phase**: Milestone 8 — Final Documentation, CO-Mapping & Final Academic Report
+- **Current Phase**: Milestone 8 — Final Documentation, CO-Mapping & Academic Report
+- **Next Phase**: Final Project Completion & Academic Submission
 
 ---
 
@@ -33,7 +33,8 @@
 | **4** | Database and ER Model | **[x] Completed** | 2026-09-30 | feat(backend): implement relational models, database schema, security foundation, and API routers |
 | **5** | Technology Implementation & Working Website | **[x] Completed** | 2026-09-30 | feat(web): build complete working SecureExam website (frontend, backend, student, faculty, admin) |
 | **6** | Security, Threat Modeling & Automated Testing | **[x] Completed** | 2026-09-30 | test(security): implement formal STRIDE threat model, DFD, automated security test suites, SonarQube quality gate |
-| **7** | DevSecOps, Client Change Request & Refactoring | [ ] In Progress | 2026-09-30 | - |
+| **7** | DevSecOps, Client Change Request & Refactoring | **[x] Completed** | 2026-09-30 | feat(devsecops): containerization, CI/CD, negative marking Strategy refactoring, and governance framework |
+| **8** | Final Documentation, CO-Mapping & Academic Report | [ ] In Progress | 2026-09-30 | - |
 | **8** | Core Examination System | [ ] Not Started | Pending | - |
 | **9** | Secure Exam Timer | [ ] Not Started | Pending | - |
 | **10** | Result Security | [ ] Not Started | Pending | - |

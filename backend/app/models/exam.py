@@ -2,7 +2,7 @@ import enum
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.core.database import Base
@@ -29,6 +29,7 @@ class Exam(Base):
     duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     total_marks: Mapped[float] = mapped_column(Float, default=100.0, nullable=False)
     passing_marks: Mapped[float] = mapped_column(Float, default=40.0, nullable=False)
+    enable_negative_marking: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     status: Mapped[ExamStatus] = mapped_column(Enum(ExamStatus), default=ExamStatus.DRAFT, nullable=False, index=True)
 
     created_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)

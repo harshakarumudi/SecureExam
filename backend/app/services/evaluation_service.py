@@ -13,6 +13,7 @@ from backend.app.models.user import User
 from backend.app.schemas.attempt import AttemptSubmitRequest
 from backend.app.schemas.result import ResultOut
 from backend.app.services.audit_service import AuditService
+from backend.app.services.evaluation_strategies import EvaluationStrategyFactory
 
 
 class EvaluationService:
@@ -85,6 +86,10 @@ class EvaluationService:
         total_score = 0.0
         max_score = 0.0
 
+        # Resolve evaluation strategy via factory (CR-2026-004 Strategy Pattern)
+        use_negative = getattr(exam, "enable_negative_marking", False) or apply_negative_marking
+        strategy = EvaluationStrategyFactory.get_strategy(use_negative)
+
         # Persist student answers and evaluate
         for q in questions:
             max_score += q.marks
@@ -99,18 +104,11 @@ class EvaluationService:
             )
             db.add(db_answer)
 
-            # Find correct option directly from database records
-            correct_opt = next((opt for opt in q.options if opt.is_correct), None)
+            # Polymorphic score evaluation
+            earned = strategy.evaluate_question(q, chosen_opt_id)
+            total_score += earned
 
-            if chosen_opt_id is not None:
-                if correct_opt and chosen_opt_id == correct_opt.id:
-                    total_score += q.marks
-                else:
-                    if apply_negative_marking:
-                        total_score -= q.negative_marks
-                    # In V1.0, wrong answers yield 0 penalty
-
-        total_score = max(0.0, total_score)  # score cannot be negative
+        total_score = max(0.0, total_score)  # score cannot be negative (underflow protection)
         percentage = (total_score / max_score * 100.0) if max_score > 0 else 0.0
         passed = total_score >= exam.passing_marks
 
