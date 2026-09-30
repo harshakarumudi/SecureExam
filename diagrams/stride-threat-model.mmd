@@ -1,0 +1,71 @@
+graph TD
+    %% ============================================================
+    %% SECUREEXAM STRIDE THREAT MATRIX & MITIGATION MAP
+    %% ============================================================
+
+    subgraph STRIDE_Categories ["STRIDE Threat Categories"]
+        S["[S] Spoofing Identity<br/>Credential Stuffing, Token Forgery"]
+        T["[T] Tampering with Data<br/>Exam Paper Edit, Score Injection, Payload Mod"]
+        R["[R] Repudiation<br/>Denial of Exam Submission, Clock Skew Claims"]
+        I["[I] Information Disclosure<br/>Key Leakage, IDOR Result Access, Verbose Errors"]
+        D["[D] Denial of Service<br/>Brute Force, Exam Timer Flooding, DB Overload"]
+        E["[E] Elevation of Privilege<br/>Student Access to Admin / Faculty Endpoints"]
+    end
+
+    subgraph System_Assets ["Target Assets"]
+        A_Auth["User Credentials & JWT Sessions"]
+        A_Bank["Exam Question Bank & Correct Option Keys"]
+        A_Attempt["Active Exam Attempt & Authoritative Clock"]
+        A_Score["Sealed Result & Evaluation Ledger"]
+        A_Audit["System Audit Trails & Telemetry"]
+        A_Admin["User Management & System Configuration"]
+    end
+
+    subgraph Implemented_Mitigations ["Defensive Mitigations Implemented"]
+        M_Argon["Argon2id Hashing + High Entropy JWT HS256 + Generic Auth Errors"]
+        M_RBAC["Server-Side Dependencies: require_role(STUDENT, FACULTY, ADMIN)"]
+        M_BOLA["Row-Level Ownership Validation: attempt.student_id == user.id"]
+        M_Timer["Authoritative Server-Side Clock with Strict 15s Grace Deadline"]
+        M_ServerEval["Server-Side-Only Scoring: True Keys Kept on Server"]
+        M_ORM["SQLAlchemy Parameterized Queries (Zero Raw SQL Injections)"]
+        M_Sanitize["Bleach HTML Whitelist + React JSX Contextual Output Encoding"]
+        M_Audit["Tamper-Evident Append-Only Audit Logging with Actor IP Tracking"]
+        M_RateLimit["SlowAPI Sliding-Window Rate Limiting (5/min login, 60/min API)"]
+    end
+
+    %% Mappings from Threat to Asset
+    S -->|"Target: Identity Verification"| A_Auth
+    T -->|"Target: Question Text & Answers"| A_Bank
+    T -->|"Target: Exam Clock State"| A_Attempt
+    T -->|"Target: Grade Ledger"| A_Score
+    R -->|"Target: Action Traceability"| A_Audit
+    I -->|"Target: Key Confidentiality"| A_Bank
+    I -->|"Target: Unauthorized Student Records"| A_Score
+    D -->|"Target: Service Availability"| A_Auth
+    D -->|"Target: Exam Submission Pipeline"| A_Attempt
+    E -->|"Target: Faculty / Admin Operations"| A_Admin
+
+    %% Mappings from Asset to Mitigation
+    A_Auth -->|"Protected By"| M_Argon
+    A_Auth -->|"Protected By"| M_RateLimit
+    A_Bank -->|"Protected By"| M_ServerEval
+    A_Bank -->|"Protected By"| M_RBAC
+    A_Attempt -->|"Protected By"| M_Timer
+    A_Attempt -->|"Protected By"| M_BOLA
+    A_Score -->|"Protected By"| M_ServerEval
+    A_Score -->|"Protected By"| M_BOLA
+    A_Audit -->|"Protected By"| M_Audit
+    A_Admin -->|"Protected By"| M_RBAC
+
+    %% Direct Vector Mitigations
+    T -.->|"Neutralized By"| M_ORM
+    T -.->|"Neutralized By"| M_Sanitize
+
+    %% Styling
+    classDef stride fill:#fee2e2,stroke:#b91c1c,stroke-width:2px,color:#7f1d1d;
+    classDef asset fill:#fef3c7,stroke:#b45309,stroke-width:2px,color:#78350f;
+    classDef mitigation fill:#dcfce7,stroke:#15803d,stroke-width:2px,color:#14532d;
+
+    class S,T,R,I,D,E stride;
+    class A_Auth,A_Bank,A_Attempt,A_Score,A_Audit,A_Admin asset;
+    class M_Argon,M_RBAC,M_BOLA,M_Timer,M_ServerEval,M_ORM,M_Sanitize,M_Audit,M_RateLimit mitigation;

@@ -1,5 +1,6 @@
-from typing import Optional
+
 from pydantic import BaseModel, EmailStr, Field
+
 from backend.app.schemas.user import UserOut
 
 
@@ -16,6 +17,6 @@ class TokenResponse(BaseModel):
 
 
 class TokenPayload(BaseModel):
-    sub: Optional[str] = None
-    role: Optional[str] = None
-    exp: Optional[int] = None
+    sub: str | None = None
+    role: str | None = None
+    exp: int | None = None

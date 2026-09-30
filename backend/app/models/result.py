@@ -1,13 +1,15 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import Integer, Float, Boolean, DateTime, ForeignKey
+
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from backend.app.core.database import Base
 
 if TYPE_CHECKING:
     from backend.app.models.attempt import ExamAttempt
-    from backend.app.models.user import User
     from backend.app.models.exam import Exam
+    from backend.app.models.user import User
 
 
 class Result(Base):
@@ -17,7 +19,7 @@ class Result(Base):
     attempt_id: Mapped[int] = mapped_column(Integer, ForeignKey("exam_attempts.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
     student_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     exam_id: Mapped[int] = mapped_column(Integer, ForeignKey("exams.id", ondelete="CASCADE"), nullable=False, index=True)
-    
+
     total_score: Mapped[float] = mapped_column(Float, nullable=False)
     max_score: Mapped[float] = mapped_column(Float, nullable=False)
     percentage: Mapped[float] = mapped_column(Float, nullable=False)
@@ -25,7 +27,7 @@ class Result(Base):
 
     evaluated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         nullable=False
     )
 

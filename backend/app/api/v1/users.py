@@ -1,8 +1,9 @@
-from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.api.deps import get_db, require_role, get_client_ip
+
+from backend.app.api.deps import get_client_ip, get_db, require_role
 from backend.app.models.user import User, UserRole
 from backend.app.schemas.user import UserOut, UserRoleUpdate, UserStatusUpdate
 from backend.app.services.audit_service import AuditService
@@ -10,7 +11,7 @@ from backend.app.services.audit_service import AuditService
 router = APIRouter(prefix="/users", tags=["User Governance (Admin)"])
 
 
-@router.get("/", response_model=List[UserOut])
+@router.get("/", response_model=list[UserOut])
 async def list_users(
     current_admin: User = Depends(require_role(UserRole.ADMIN)),
     db: AsyncSession = Depends(get_db)

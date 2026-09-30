@@ -100,46 +100,46 @@ Status Key:
 ---
 
 ## E. Threat Modeling
-- [ ] Data Flow Diagram (DFD) created (`diagrams/dfd.mmd`)
-- [ ] Trust boundaries and attack surface mapped
-- [ ] STRIDE threat analysis performed (`diagrams/stride-threat-model.mmd`)
-- [ ] 12+ formal threat scenarios documented in Threat Register
-- [ ] DREAD / CVSS risk ratings calculated
-- [ ] Mitigations and residual risk evaluated
-- [ ] `docs/threat-model.md` created
+- [x] Data Flow Diagram (DFD) created (`diagrams/dfd.mmd`)
+- [x] Trust boundaries and attack surface mapped
+- [x] STRIDE threat analysis performed (`diagrams/stride-threat-model.mmd`)
+- [x] 12+ formal threat scenarios documented in Threat Register
+- [x] DREAD / CVSS risk ratings calculated
+- [x] Mitigations and residual risk evaluated
+- [x] `docs/threat-model.md` created
 
 ---
 
 ## F. Testing
-- [ ] Automated unit tests for cryptography and password policies
-- [ ] Automated unit tests for authoritative exam timer math and expiry
-- [ ] Automated unit tests for score evaluation
-- [ ] Automated integration tests for user registration and authentication
-- [ ] Automated integration tests for faculty exam authoring and publication
-- [ ] Automated integration tests for student attempt, submission, and result generation
-- [ ] Automated security tests for IDOR / BOLA authorization bypass
-- [ ] Automated security tests for SQL injection attack payloads
-- [ ] Automated security tests for XSS attack vectors
-- [ ] Automated security tests for rate limiting threshold enforcement
-- [ ] Pytest test suite passing 100%
+- [x] Automated unit tests for cryptography and password policies
+- [x] Automated unit tests for authoritative exam timer math and expiry
+- [x] Automated unit tests for score evaluation
+- [x] Automated integration tests for user registration and authentication
+- [x] Automated integration tests for faculty exam authoring and publication
+- [x] Automated integration tests for student attempt, submission, and result generation
+- [x] Automated security tests for IDOR / BOLA authorization bypass
+- [x] Automated security tests for SQL injection attack payloads
+- [x] Automated security tests for XSS attack vectors
+- [x] Automated security tests for rate limiting threshold enforcement
+- [x] Pytest test suite passing 100%
 
 ---
 
 ## G. SonarQube
-- [ ] `sonar-project.properties` configured
-- [ ] Quality gate thresholds defined
-- [ ] Bugs, vulnerabilities, and security hotspots analyzed
-- [ ] Code smell and maintainability metrics tracked
-- [ ] Before/after remediation documented in `docs/sonarqube.md`
+- [x] `sonar-project.properties` configured
+- [x] Quality gate thresholds defined
+- [x] Bugs, vulnerabilities, and security hotspots analyzed
+- [x] Code smell and maintainability metrics tracked
+- [x] Before/after remediation documented in `docs/sonarqube.md`
 
 ---
 
 ## H. Dependency Security
-- [ ] Backend dependency audit using `pip-audit`
-- [ ] Frontend dependency audit using `npm audit`
-- [ ] Direct and transitive dependency inventory documented
-- [ ] Vulnerability remediation documented in `docs/dependency-security.md`
-- [ ] Zero critical unmitigated vulnerabilities
+- [x] Backend dependency audit using `pip-audit`
+- [x] Frontend dependency audit using `npm audit`
+- [x] Direct and transitive dependency inventory documented
+- [x] Vulnerability remediation documented in `docs/dependency-security.md`
+- [x] Zero critical unmitigated vulnerabilities
 
 ---
 

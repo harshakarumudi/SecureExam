@@ -1,7 +1,10 @@
 import asyncio
 import time
-from httpx import AsyncClient, ASGITransport
+
+from httpx import ASGITransport, AsyncClient
+
 from backend.main import app
+
 
 async def run_e2e_verification():
     transport = ASGITransport(app=app)
@@ -152,7 +155,7 @@ async def run_e2e_verification():
         assert audit_res.status_code == 200
         logs = audit_res.json()
         print(f"Total audit logs generated: {len(logs)}")
-        actions = [l["action"] for l in logs]
+        actions = [item["action"] for item in logs]
         assert "USER_REGISTERED" in actions
         assert "EXAM_CREATED" in actions
         assert "ATTEMPT_STARTED" in actions

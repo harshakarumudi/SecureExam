@@ -1,6 +1,7 @@
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
 from backend.app.models.user import UserRole
 
 
@@ -11,12 +12,12 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=10)
-    role: Optional[UserRole] = UserRole.STUDENT
+    role: UserRole | None = UserRole.STUDENT
 
 
 class UserUpdate(BaseModel):
-    full_name: Optional[str] = Field(None, min_length=2, max_length=255)
-    password: Optional[str] = Field(None, min_length=10)
+    full_name: str | None = Field(None, min_length=2, max_length=255)
+    password: str | None = Field(None, min_length=10)
 
 
 class UserRoleUpdate(BaseModel):

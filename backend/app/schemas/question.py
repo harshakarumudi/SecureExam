@@ -1,5 +1,5 @@
-from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class OptionBase(BaseModel):
@@ -30,27 +30,27 @@ class QuestionBase(BaseModel):
     question_text: str = Field(..., min_length=3)
     marks: float = Field(default=1.0, ge=0.1)
     negative_marks: float = Field(default=0.0, ge=0.0)
-    explanation: Optional[str] = None
+    explanation: str | None = None
     order_index: int = 0
 
 
 class QuestionCreate(QuestionBase):
-    options: List[OptionCreate] = Field(..., min_length=2, max_length=6)
+    options: list[OptionCreate] = Field(..., min_length=2, max_length=6)
 
 
 class QuestionUpdate(BaseModel):
-    question_text: Optional[str] = Field(None, min_length=3)
-    marks: Optional[float] = Field(None, ge=0.1)
-    negative_marks: Optional[float] = Field(None, ge=0.0)
-    explanation: Optional[str] = None
-    order_index: Optional[int] = None
-    options: Optional[List[OptionCreate]] = None
+    question_text: str | None = Field(None, min_length=3)
+    marks: float | None = Field(None, ge=0.1)
+    negative_marks: float | None = Field(None, ge=0.0)
+    explanation: str | None = None
+    order_index: int | None = None
+    options: list[OptionCreate] | None = None
 
 
 class QuestionOut(QuestionBase):
     id: int
     exam_id: int
-    options: List[OptionOut]
+    options: list[OptionOut]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -61,6 +61,6 @@ class QuestionCandidateOut(BaseModel):
     question_text: str
     marks: float
     order_index: int
-    options: List[OptionCandidateOut]
+    options: list[OptionCandidateOut]
 
     model_config = ConfigDict(from_attributes=True)

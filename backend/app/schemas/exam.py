@@ -1,18 +1,19 @@
 from datetime import datetime
-from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field
+
 from backend.app.models.exam import ExamStatus
-from backend.app.schemas.question import QuestionOut, QuestionCandidateOut
+from backend.app.schemas.question import QuestionOut
 
 
 class ExamBase(BaseModel):
     title: str = Field(..., min_length=3, max_length=255)
-    description: Optional[str] = None
+    description: str | None = None
     duration_minutes: int = Field(..., ge=1, le=360)
     total_marks: float = Field(default=100.0, ge=1.0)
     passing_marks: float = Field(default=40.0, ge=0.0)
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
+    start_time: datetime | None = None
+    end_time: datetime | None = None
 
 
 class ExamCreate(ExamBase):
@@ -20,14 +21,14 @@ class ExamCreate(ExamBase):
 
 
 class ExamUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=3, max_length=255)
-    description: Optional[str] = None
-    duration_minutes: Optional[int] = Field(None, ge=1, le=360)
-    total_marks: Optional[float] = Field(None, ge=1.0)
-    passing_marks: Optional[float] = Field(None, ge=0.0)
-    status: Optional[ExamStatus] = None
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
+    title: str | None = Field(None, min_length=3, max_length=255)
+    description: str | None = None
+    duration_minutes: int | None = Field(None, ge=1, le=360)
+    total_marks: float | None = Field(None, ge=1.0)
+    passing_marks: float | None = Field(None, ge=0.0)
+    status: ExamStatus | None = None
+    start_time: datetime | None = None
+    end_time: datetime | None = None
 
 
 class ExamStatusUpdate(BaseModel):
@@ -46,7 +47,7 @@ class ExamOut(ExamBase):
 
 
 class ExamDetailOut(ExamOut):
-    questions: List[QuestionOut] = []
+    questions: list[QuestionOut] = []
 
     model_config = ConfigDict(from_attributes=True)
 

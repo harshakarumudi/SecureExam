@@ -1,17 +1,18 @@
 from datetime import datetime
-from typing import List, Optional
+
 from pydantic import BaseModel, ConfigDict
+
 from backend.app.models.attempt import AttemptStatus
 from backend.app.schemas.question import QuestionCandidateOut
 
 
 class AnswerSubmissionItem(BaseModel):
     question_id: int
-    selected_option_id: Optional[int] = None
+    selected_option_id: int | None = None
 
 
 class AttemptSubmitRequest(BaseModel):
-    answers: List[AnswerSubmissionItem] = []
+    answers: list[AnswerSubmissionItem] = []
 
 
 class AttemptStartResponse(BaseModel):
@@ -22,7 +23,7 @@ class AttemptStartResponse(BaseModel):
     started_at: datetime
     expires_at: datetime
     remaining_seconds: int
-    questions: List[QuestionCandidateOut]
+    questions: list[QuestionCandidateOut]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -33,7 +34,7 @@ class AttemptOut(BaseModel):
     exam_id: int
     started_at: datetime
     expires_at: datetime
-    submitted_at: Optional[datetime] = None
+    submitted_at: datetime | None = None
     status: AttemptStatus
 
     model_config = ConfigDict(from_attributes=True)

@@ -1,8 +1,9 @@
-from typing import List, Optional
+
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from backend.app.core.database import get_db
 from backend.app.core.security import decode_access_token
 from backend.app.models.user import User, UserRole
@@ -31,7 +32,7 @@ async def get_current_user(
     if payload is None:
         raise credentials_exception
 
-    user_id_str: Optional[str] = payload.get("sub")
+    user_id_str: str | None = payload.get("sub")
     if user_id_str is None:
         raise credentials_exception
 
@@ -65,7 +66,7 @@ def require_role(required_role: UserRole):
     return role_checker
 
 
-def require_roles(allowed_roles: List[UserRole]):
+def require_roles(allowed_roles: list[UserRole]):
     """Factory creating an authorization dependency allowing any of multiple roles."""
     def roles_checker(current_user: User = Depends(get_current_user)) -> User:
         if current_user.role not in allowed_roles and current_user.role != UserRole.ADMIN:

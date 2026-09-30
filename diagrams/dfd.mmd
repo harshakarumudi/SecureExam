@@ -1,0 +1,91 @@
+graph TD
+    %% ============================================================
+    %% SECUREEXAM DATA FLOW DIAGRAM (DFD) — LEVEL 0 & LEVEL 1
+    %% ============================================================
+
+    subgraph TrustZone_Untrusted ["Trust Zone 0: Untrusted External Environment"]
+        Student["Candidate / Student"]
+        Faculty["Examiner / Faculty"]
+        Admin["System Administrator"]
+        Attacker["Adversary / Threat Actor"]
+    end
+
+    subgraph TrustBoundary_Perimeter ["Trust Boundary 1: Perimeter & Transport Security (TLS 1.3)"]
+        WAF["Reverse Proxy / TLS Terminator / Rate Limiter"]
+    end
+
+    subgraph TrustZone_DMZ ["Trust Zone 1: Application Perimeter (DMZ / API Layer)"]
+        subgraph TrustBoundary_Auth ["Trust Boundary 2: Authentication & Input Sanitization"]
+            P1["Process 1.0<br/>Authentication &<br/>Token Issuance"]
+            P2["Process 2.0<br/>Request Validation &<br/>Sanitization"]
+        end
+    end
+
+    subgraph TrustZone_Service ["Trust Zone 2: Trusted Application Domain (Service Layer)"]
+        subgraph TrustBoundary_Domain ["Trust Boundary 3: Domain Authorization & RBAC Enforcement"]
+            P3["Process 3.0<br/>Exam Administration &<br/>Question Banking"]
+            P4["Process 4.0<br/>Exam Session &<br/>Authoritative Timer Engine"]
+            P5["Process 5.0<br/>Server-Side Grading &<br/>Tamper-Proof Evaluation"]
+            P6["Process 6.0<br/>Audit Logging &<br/>Security Telemetry"]
+            P7["Process 7.0<br/>User & Role<br/>Governance Service"]
+        end
+    end
+
+    subgraph TrustZone_Data ["Trust Zone 3: Isolated Persistence Layer (Database)"]
+        subgraph TrustBoundary_Storage ["Trust Boundary 4: Data At Rest Encryption & Row-Level Isolation"]
+            DS1[("DS-1: User Accounts &<br/>Argon2id Hashes")]
+            DS2[("DS-2: Question Bank &<br/>Confidential Keys")]
+            DS3[("DS-3: Active Attempts &<br/>Authoritative Clocks")]
+            DS4[("DS-4: Sealed Results &<br/>Student Scores")]
+            DS5[("DS-5: Immutable<br/>Audit Trail")]
+        end
+    end
+
+    %% External Entity Ingress
+    Student -->|"1. HTTPS Login / Exam Responses"| WAF
+    Faculty -->|"2. HTTPS Login / Exam Authoring"| WAF
+    Admin -->|"3. HTTPS Admin & Log Queries"| WAF
+    Attacker -.->|"Threat Vector: Tampering / Injection / BOLA"| WAF
+
+    %% Perimeter to DMZ
+    WAF -->|"Sanitized TLS Traffic"| P2
+    P2 -->|"Credentials Payload"| P1
+    P1 -->|"Issue Bearer JWT"| WAF
+
+    %% DMZ to Trusted Service Domain
+    P2 -->|"Authorized Exam Authoring (Faculty JWT)"| P3
+    P2 -->|"Authorized Exam Session (Student JWT)"| P4
+    P2 -->|"Authorized Admin Operations (Admin JWT)"| P7
+
+    %% Internal Service Data Flows
+    P1 -->|"Verify Argon2id Hash / Fetch User"| DS1
+    P3 -->|"Persist Draft / Published Exams & Questions"| DS2
+    P4 -->|"Fetch Active Questions (Confidential Keys Omitted)"| DS2
+    P4 -->|"Create / Update Attempt (Record Started & Expires At)"| DS3
+    P4 -->|"Forward Submission at Expiration Deadline"| P5
+    P5 -->|"Fetch True Answer Keys (Server-Side Only)"| DS2
+    P5 -->|"Persist Sealed Final Score"| DS4
+    P5 -->|"Update Attempt Status to SUBMITTED / EXPIRED"| DS3
+
+    %% Audit Telemetry (All Process Invocations)
+    P1 -.->|"Auth Success / Failure Telemetry"| P6
+    P3 -.->|"Exam Lifecycle Event"| P6
+    P4 -.->|"Attempt Started / Terminated"| P6
+    P5 -.->|"Evaluation Completed / Violation"| P6
+    P7 -.->|"Role Change / User Activation"| P6
+    P6 -->|"Append Immutable Security Audit Event"| DS5
+    P7 -->|"Query Audit Logs (Admin Read Only)"| DS5
+    P7 -->|"Manage User Accounts & Roles"| DS1
+
+    %% Styling
+    classDef untrusted fill:#fee2e2,stroke:#ef4444,stroke-width:2px,color:#991b1b;
+    classDef dmz fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#92400e;
+    classDef trusted fill:#ecfdf5,stroke:#10b981,stroke-width:2px,color:#065f46;
+    classDef datastore fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#075985;
+    classDef perimeter fill:#f3e8ff,stroke:#8b5cf6,stroke-width:2px,color:#5b21b6;
+
+    class Student,Faculty,Admin,Attacker untrusted;
+    class WAF perimeter;
+    class P1,P2 dmz;
+    class P3,P4,P5,P6,P7 trusted;
+    class DS1,DS2,DS3,DS4,DS5 datastore;

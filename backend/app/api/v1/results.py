@@ -1,13 +1,14 @@
-from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.api.deps import get_db, get_current_user, require_roles
-from backend.app.models.user import User, UserRole
+from sqlalchemy.orm import selectinload
+
+from backend.app.api.deps import get_current_user, get_db, require_roles
 from backend.app.models.exam import Exam
 from backend.app.models.result import Result
-from backend.app.schemas.result import ResultOut, ResultDetailOut
+from backend.app.models.user import User, UserRole
+from backend.app.schemas.result import ResultDetailOut, ResultOut
 from backend.app.services.evaluation_service import EvaluationService
 
 router = APIRouter(prefix="/results", tags=["Results & Grades"])
@@ -22,7 +23,7 @@ async def get_attempt_result(
     return await EvaluationService.get_result_for_attempt(db, attempt_id=attempt_id, current_user=current_user)
 
 
-@router.get("/my", response_model=List[ResultOut])
+@router.get("/my", response_model=list[ResultOut])
 async def get_my_results(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -35,7 +36,7 @@ async def get_my_results(
     return result.scalars().all()
 
 
-@router.get("/exam/{exam_id}", response_model=List[ResultDetailOut])
+@router.get("/exam/{exam_id}", response_model=list[ResultDetailOut])
 async def get_exam_results(
     exam_id: int,
     current_user: User = Depends(require_roles([UserRole.FACULTY, UserRole.ADMIN])),
@@ -56,8 +57,8 @@ async def get_exam_results(
         .order_by(Result.evaluated_at.desc())
     )
     results = result.scalars().all()
-    
-    out: List[ResultDetailOut] = []
+
+    out: list[ResultDetailOut] = []
     for r in results:
         out.append(
             ResultDetailOut(

@@ -1,9 +1,11 @@
 import re
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional, Tuple
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
 import jwt
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHash
+from argon2.exceptions import InvalidHash, VerificationError, VerifyMismatchError
+
 from backend.app.core.config import settings
 
 # Initialize Argon2id Hasher with secure OWASP-recommended parameters
@@ -28,7 +30,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
-def validate_password_strength(password: str) -> Tuple[bool, str]:
+def validate_password_strength(password: str) -> tuple[bool, str]:
     """
     Enforces rigorous password policy:
     - Minimum 10 characters
@@ -50,24 +52,24 @@ def validate_password_strength(password: str) -> Tuple[bool, str]:
     return True, ""
 
 
-def create_access_token(subject: str, role: str, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(subject: str, role: str, expires_delta: timedelta | None = None) -> str:
     """Generates a cryptographically signed JWT access token with subject and role claims."""
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
-    to_encode: Dict[str, Any] = {
+        expire = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    to_encode: dict[str, Any] = {
         "sub": str(subject),
         "role": str(role),
         "exp": expire,
-        "iat": datetime.now(timezone.utc)
+        "iat": datetime.now(UTC)
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
-def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
+def decode_access_token(token: str) -> dict[str, Any] | None:
     """Decodes and cryptographically validates a JWT token. Returns payload or None."""
     try:
         payload = jwt.decode(

@@ -1,20 +1,21 @@
-from typing import List, Optional
+
 from fastapi import HTTPException, status
-from sqlalchemy import select, func
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from backend.app.core.sanitizer import sanitize_html
-from backend.app.models.user import User, UserRole
 from backend.app.models.exam import Exam, ExamStatus
 from backend.app.models.question import Question, QuestionOption
+from backend.app.models.user import User, UserRole
 from backend.app.schemas.exam import ExamCreate, ExamUpdate
-from backend.app.schemas.question import QuestionCreate, QuestionUpdate
+from backend.app.schemas.question import QuestionCreate
 from backend.app.services.audit_service import AuditService
 
 
 class ExamService:
     @staticmethod
-    async def create_exam(db: AsyncSession, exam_in: ExamCreate, creator: User, ip_address: Optional[str] = None) -> Exam:
+    async def create_exam(db: AsyncSession, exam_in: ExamCreate, creator: User, ip_address: str | None = None) -> Exam:
         clean_title = sanitize_html(exam_in.title)
         clean_desc = sanitize_html(exam_in.description) if exam_in.description else None
 
@@ -61,7 +62,7 @@ class ExamService:
         return exam
 
     @staticmethod
-    async def list_exams_for_faculty(db: AsyncSession, faculty_id: int, is_admin: bool = False) -> List[Exam]:
+    async def list_exams_for_faculty(db: AsyncSession, faculty_id: int, is_admin: bool = False) -> list[Exam]:
         query = select(Exam).options(selectinload(Exam.questions))
         if not is_admin:
             query = query.where(Exam.created_by == faculty_id)
@@ -74,7 +75,7 @@ class ExamService:
         return exams
 
     @staticmethod
-    async def list_published_exams_for_students(db: AsyncSession) -> List[Exam]:
+    async def list_published_exams_for_students(db: AsyncSession) -> list[Exam]:
         result = await db.execute(
             select(Exam)
             .options(selectinload(Exam.questions))
@@ -87,7 +88,7 @@ class ExamService:
         return exams
 
     @staticmethod
-    async def update_exam(db: AsyncSession, exam_id: int, exam_in: ExamUpdate, current_user: User, ip_address: Optional[str] = None) -> Exam:
+    async def update_exam(db: AsyncSession, exam_id: int, exam_in: ExamUpdate, current_user: User, ip_address: str | None = None) -> Exam:
         exam = await ExamService.get_exam_by_id(db, exam_id)
 
         # Enforce Object-Level Authorization (BOLA/IDOR prevention)
@@ -140,7 +141,7 @@ class ExamService:
         return exam
 
     @staticmethod
-    async def delete_exam(db: AsyncSession, exam_id: int, current_user: User, ip_address: Optional[str] = None) -> None:
+    async def delete_exam(db: AsyncSession, exam_id: int, current_user: User, ip_address: str | None = None) -> None:
         exam = await ExamService.get_exam_by_id(db, exam_id)
 
         # Enforce Object-Level Authorization

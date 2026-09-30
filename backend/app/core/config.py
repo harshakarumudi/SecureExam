@@ -1,5 +1,3 @@
-from typing import List, Union
-from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,9 +13,9 @@ class Settings(BaseSettings):
 
     # Database Configuration
     DATABASE_URL: str = "sqlite+aiosqlite:///./secureexam.db"
-    
+
     # CORS
-    ALLOWED_ORIGINS: List[str] = [
+    ALLOWED_ORIGINS: list[str] = [
         "http://localhost:5173",
         "http://localhost:3000",
         "http://127.0.0.1:5173",

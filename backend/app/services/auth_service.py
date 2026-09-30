@@ -1,24 +1,25 @@
 from datetime import timedelta
-from typing import Optional, Tuple
+
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from backend.app.core.config import settings
 from backend.app.core.security import (
+    create_access_token,
     get_password_hash,
-    verify_password,
     validate_password_strength,
-    create_access_token
+    verify_password,
 )
 from backend.app.models.user import User, UserRole
-from backend.app.schemas.user import UserCreate
 from backend.app.schemas.auth import LoginRequest, TokenResponse
+from backend.app.schemas.user import UserCreate
 from backend.app.services.audit_service import AuditService
 
 
 class AuthService:
     @staticmethod
-    async def register(db: AsyncSession, user_in: UserCreate, ip_address: Optional[str] = None) -> User:
+    async def register(db: AsyncSession, user_in: UserCreate, ip_address: str | None = None) -> User:
         # 1. Enforce rigorous password complexity
         is_strong, msg = validate_password_strength(user_in.password)
         if not is_strong:
@@ -66,7 +67,7 @@ class AuthService:
         return db_user
 
     @staticmethod
-    async def authenticate(db: AsyncSession, login_in: LoginRequest, ip_address: Optional[str] = None) -> TokenResponse:
+    async def authenticate(db: AsyncSession, login_in: LoginRequest, ip_address: str | None = None) -> TokenResponse:
         norm_email = login_in.email.strip().lower()
         result = await db.execute(select(User).where(User.email == norm_email))
         user = result.scalars().first()

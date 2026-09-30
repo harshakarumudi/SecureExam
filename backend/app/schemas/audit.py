@@ -1,17 +1,17 @@
 from datetime import datetime
-from typing import Optional
+
 from pydantic import BaseModel, ConfigDict
 
 
 class AuditLogOut(BaseModel):
     id: int
     timestamp: datetime
-    actor_id: Optional[int] = None
-    actor_role: Optional[str] = None
+    actor_id: int | None = None
+    actor_role: str | None = None
     action: str
-    resource_id: Optional[str] = None
-    ip_address: Optional[str] = None
+    resource_id: str | None = None
+    ip_address: str | None = None
     status: str
-    details: Optional[str] = None
+    details: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

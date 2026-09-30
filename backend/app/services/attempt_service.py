@@ -1,21 +1,22 @@
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from datetime import UTC, datetime, timedelta
+
 from fastapi import HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.models.user import User
+from sqlalchemy.orm import selectinload
+
+from backend.app.models.attempt import AttemptStatus, ExamAttempt
 from backend.app.models.exam import Exam, ExamStatus
-from backend.app.models.question import Question, QuestionOption
-from backend.app.models.attempt import ExamAttempt, AttemptStatus, StudentAnswer
-from backend.app.schemas.attempt import AttemptStartResponse, AttemptSubmitRequest
-from backend.app.schemas.question import QuestionCandidateOut, OptionCandidateOut
+from backend.app.models.question import Question
+from backend.app.models.user import User
+from backend.app.schemas.attempt import AttemptStartResponse
+from backend.app.schemas.question import OptionCandidateOut, QuestionCandidateOut
 from backend.app.services.audit_service import AuditService
 
 
 class AttemptService:
     @staticmethod
-    async def start_attempt(db: AsyncSession, exam_id: int, student: User, ip_address: Optional[str] = None) -> AttemptStartResponse:
+    async def start_attempt(db: AsyncSession, exam_id: int, student: User, ip_address: str | None = None) -> AttemptStartResponse:
         # 1. Fetch exam with questions
         result = await db.execute(
             select(Exam)
@@ -44,8 +45,8 @@ class AttemptService:
                     detail="You have already submitted this examination."
                 )
             if existing_attempt.status == AttemptStatus.IN_PROGRESS:
-                now = datetime.now(timezone.utc)
-                exp_at = existing_attempt.expires_at.replace(tzinfo=timezone.utc) if existing_attempt.expires_at.tzinfo is None else existing_attempt.expires_at
+                now = datetime.now(UTC)
+                exp_at = existing_attempt.expires_at.replace(tzinfo=UTC) if existing_attempt.expires_at.tzinfo is None else existing_attempt.expires_at
                 if now < exp_at:
                     rem_secs = max(0, int((exp_at - now).total_seconds()))
                     candidate_qs = AttemptService._build_candidate_questions(exam.questions)
@@ -61,7 +62,7 @@ class AttemptService:
                     )
 
         # 3. Initialize server-authoritative timer
-        started_at = datetime.now(timezone.utc)
+        started_at = datetime.now(UTC)
         expires_at = started_at + timedelta(minutes=exam.duration_minutes)
 
         attempt = ExamAttempt(
@@ -101,8 +102,8 @@ class AttemptService:
         )
 
     @staticmethod
-    def _build_candidate_questions(questions: List[Question]) -> List[QuestionCandidateOut]:
-        candidate_questions: List[QuestionCandidateOut] = []
+    def _build_candidate_questions(questions: list[Question]) -> list[QuestionCandidateOut]:
+        candidate_questions: list[QuestionCandidateOut] = []
         for q in sorted(questions, key=lambda x: x.order_index):
             opts = [
                 OptionCandidateOut(

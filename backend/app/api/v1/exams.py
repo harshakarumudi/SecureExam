@@ -1,10 +1,22 @@
-from typing import List
+
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.api.deps import get_db, get_current_user, require_role, require_roles, get_client_ip
-from backend.app.models.user import User, UserRole
+
+from backend.app.api.deps import (
+    get_client_ip,
+    get_current_user,
+    get_db,
+    require_roles,
+)
 from backend.app.models.exam import ExamStatus
-from backend.app.schemas.exam import ExamCreate, ExamUpdate, ExamOut, ExamDetailOut, ExamCandidateOut
+from backend.app.models.user import User, UserRole
+from backend.app.schemas.exam import (
+    ExamCandidateOut,
+    ExamCreate,
+    ExamDetailOut,
+    ExamOut,
+    ExamUpdate,
+)
 from backend.app.schemas.question import QuestionCreate, QuestionOut
 from backend.app.services.exam_service import ExamService
 
@@ -22,7 +34,7 @@ async def create_exam(
     return await ExamService.create_exam(db, exam_in, creator=current_user, ip_address=ip)
 
 
-@router.get("/", response_model=List[ExamOut])
+@router.get("/", response_model=list[ExamOut])
 async def list_exams(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -36,7 +48,7 @@ async def list_exams(
     return await ExamService.list_published_exams_for_students(db)
 
 
-@router.get("/available", response_model=List[ExamCandidateOut])
+@router.get("/available", response_model=list[ExamCandidateOut])
 async def list_available_exams(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)

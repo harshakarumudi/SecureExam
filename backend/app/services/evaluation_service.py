@@ -1,14 +1,15 @@
-from datetime import datetime, timezone, timedelta
-from typing import List, Optional
+from datetime import UTC, datetime, timedelta
+
 from fastapi import HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.models.user import User
+from sqlalchemy.orm import selectinload
+
+from backend.app.models.attempt import AttemptStatus, ExamAttempt, StudentAnswer
 from backend.app.models.exam import Exam
-from backend.app.models.question import Question, QuestionOption
-from backend.app.models.attempt import ExamAttempt, AttemptStatus, StudentAnswer
+from backend.app.models.question import Question
 from backend.app.models.result import Result
+from backend.app.models.user import User
 from backend.app.schemas.attempt import AttemptSubmitRequest
 from backend.app.schemas.result import ResultOut
 from backend.app.services.audit_service import AuditService
@@ -21,7 +22,7 @@ class EvaluationService:
         attempt_id: int,
         submission: AttemptSubmitRequest,
         student: User,
-        ip_address: Optional[str] = None,
+        ip_address: str | None = None,
         apply_negative_marking: bool = False
     ) -> ResultOut:
         # 1. Fetch attempt and exam
@@ -53,8 +54,8 @@ class EvaluationService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Attempt has already been submitted.")
 
         # 4. Authoritative Server Timer Expiration Check
-        now = datetime.now(timezone.utc)
-        expires_at = attempt.expires_at.replace(tzinfo=timezone.utc) if attempt.expires_at.tzinfo is None else attempt.expires_at
+        now = datetime.now(UTC)
+        expires_at = attempt.expires_at.replace(tzinfo=UTC) if attempt.expires_at.tzinfo is None else attempt.expires_at
         grace_period = timedelta(seconds=15)
         if now > expires_at + grace_period:
             attempt.status = AttemptStatus.EXPIRED
@@ -100,7 +101,7 @@ class EvaluationService:
 
             # Find correct option directly from database records
             correct_opt = next((opt for opt in q.options if opt.is_correct), None)
-            
+
             if chosen_opt_id is not None:
                 if correct_opt and chosen_opt_id == correct_opt.id:
                     total_score += q.marks

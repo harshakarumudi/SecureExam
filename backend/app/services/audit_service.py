@@ -1,5 +1,6 @@
-from typing import Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from backend.app.models.audit import AuditLog
 
 
@@ -8,12 +9,12 @@ class AuditService:
     async def log_event(
         db: AsyncSession,
         action: str,
-        actor_id: Optional[int] = None,
-        actor_role: Optional[str] = None,
-        resource_id: Optional[str] = None,
-        ip_address: Optional[str] = None,
+        actor_id: int | None = None,
+        actor_role: str | None = None,
+        resource_id: str | None = None,
+        ip_address: str | None = None,
         status: str = "SUCCESS",
-        details: Optional[str] = None
+        details: str | None = None
     ) -> AuditLog:
         """Appends an immutable security audit record to the audit_logs table."""
         audit_entry = AuditLog(

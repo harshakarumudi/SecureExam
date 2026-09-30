@@ -1,8 +1,13 @@
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.api.deps import get_db, get_current_user, require_role, get_client_ip
+
+from backend.app.api.deps import get_client_ip, get_current_user, get_db, require_role
 from backend.app.models.user import User, UserRole
-from backend.app.schemas.attempt import AttemptStartResponse, AttemptSubmitRequest, AttemptOut
+from backend.app.schemas.attempt import (
+    AttemptOut,
+    AttemptStartResponse,
+    AttemptSubmitRequest,
+)
 from backend.app.schemas.result import ResultOut
 from backend.app.services.attempt_service import AttemptService
 from backend.app.services.evaluation_service import EvaluationService

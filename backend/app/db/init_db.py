@@ -1,9 +1,11 @@
 import asyncio
 import logging
+
 from sqlalchemy import select
-from backend.app.core.database import engine, Base, AsyncSessionLocal
+
+from backend.app.core.database import AsyncSessionLocal, Base, engine
 from backend.app.core.security import get_password_hash
-from backend.app.models import User, UserRole, AuditLog
+from backend.app.models import User, UserRole
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

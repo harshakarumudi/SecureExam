@@ -1,6 +1,8 @@
-from typing import List, Optional, TYPE_CHECKING
-from sqlalchemy import Text, Integer, Float, Boolean, ForeignKey
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, Float, ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from backend.app.core.database import Base
 
 if TYPE_CHECKING:
@@ -15,12 +17,12 @@ class Question(Base):
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
     marks: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
     negative_marks: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-    explanation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
     order_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # Relationships
     exam: Mapped["Exam"] = relationship("Exam", back_populates="questions")
-    options: Mapped[List["QuestionOption"]] = relationship(
+    options: Mapped[list["QuestionOption"]] = relationship(
         "QuestionOption",
         back_populates="question",
         cascade="all, delete-orphan",
