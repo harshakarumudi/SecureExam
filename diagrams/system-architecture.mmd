@@ -1,0 +1,44 @@
+﻿flowchart TD
+    %% System Architecture Diagram - SecureExam
+    
+    subgraph ClientBoundary ["Client Layer (Untrusted Environment)"]
+        Browser["User Web Browser\n(Student / Faculty / Admin)"]
+        SPA["React 18 Single Page Application\n(TypeScript + Tailwind CSS)"]
+        Browser --> SPA
+    end
+
+    subgraph PerimeterBoundary ["Network Perimeter & Ingress (DMZ)"]
+        ReverseProxy["Reverse Proxy / NGINX\n- TLS/HTTPS Termination\n- Security Headers (CSP, HSTS, X-Frame)\n- Ingress Rate Limiting"]
+    end
+
+    subgraph AppBoundary ["Application Container Layer (Trusted Environment)"]
+        subgraph APIGateway ["API Controller & Security Interceptor"]
+            SecurityMiddleware["FastAPI Security Pipeline\n- CORS Policy\n- Rate Limiting (SlowAPI)\n- Request Body Limits"]
+            AuthInterceptor["Authentication & RBAC Interceptors\n- JWT Bearer Token Extraction\n- Cryptographic Verification\n- Role Claim Enforcement"]
+            Controllers["REST API Routers (/api/v1)\n- Auth Router\n- Users Router\n- Exams Router\n- Attempts Router\n- Results Router\n- Audit Router"]
+        end
+
+        subgraph ServiceLayer ["Business & Core Security Services"]
+            AuthService["AuthService\n- Password Policy\n- Argon2id Hashing\n- Token Issuance"]
+            ExamService["ExamService\n- Exam CRUD\n- Ownership Checks\n- Lifecycle Management"]
+            AttemptService["AttemptService\n- Authoritative Server Timer\n- Expiry Enforcement\n- Answer Persistence"]
+            EvaluationService["EvaluationService\n- Server-Side Score Math\n- Anti-Tamper Sealing\n- Result Generation"]
+            AuditService["AuditLogService\n- Tamper-Evident Event Logging\n- Sensitive Field Redaction"]
+        end
+
+        subgraph DataAccessLayer ["Data Access & ORM Layer"]
+            Repositories["SQLAlchemy 2.0 ORM Engine\n- Parameterized SQL Prepared Statements\n- Object-Relational Mappings\n- Transaction Isolation"]
+        end
+    end
+
+    subgraph StorageBoundary ["Isolated Storage Network (Internal Only)"]
+        PostgresDB[("PostgreSQL 16 Relational Database\n- Non-Exposed Port\n- Least-Privilege DB User\n- Tables: users, roles, exams,\n  questions, attempts, answers, results, audit_logs")]
+    end
+
+    SPA -->|HTTPS / WSS JSON REST API| ReverseProxy
+    ReverseProxy -->|Internal HTTP Proxy| SecurityMiddleware
+    SecurityMiddleware --> AuthInterceptor
+    AuthInterceptor --> Controllers
+    Controllers --> ServiceLayer
+    ServiceLayer --> DataAccessLayer
+    DataAccessLayer -->|TCP / UNIX Socket (Parameterized)| PostgresDB

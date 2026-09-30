@@ -1,0 +1,26 @@
+﻿flowchart TD
+    %% Deployment Architecture Diagram - SecureExam
+    
+    subgraph PublicInternet ["Public Internet"]
+        ClientDevice["Client Workstation / Browser\n(HTTPS Port 443)"]
+    end
+
+    subgraph HostServer ["Host Virtual Private Server / Docker Engine"]
+        subgraph PublicNetwork ["Public / Ingress Network (Bridged Port 443/80)"]
+            ReverseProxyContainer["Reverse Proxy Container (NGINX / Caddy)\n- Listens on 0.0.0.0:443 (TLS) & 80 (Redirect)\n- Enforces TLS 1.3 / Strict Cipher Suites\n- Adds CSP, HSTS, X-Frame-Options\n- Routes / to Frontend; /api/ to Backend"]
+        end
+
+        subgraph ApplicationNetwork ["Application Docker Network (secureexam_app_net)"]
+            FrontendContainer["Frontend Web Container\n- Unprivileged Nginx Serving React Build\n- User: appuser (UID 10001)\n- Internal Port: 80\n- Read-Only Container Filesystem"]
+            BackendContainer["Backend API Container\n- Python 3.13 + Uvicorn ASGI Server\n- User: appuser (UID 10001)\n- Internal Port: 8000\n- In-Memory Rate Limiter\n- Healthcheck: GET /health"]
+        end
+
+        subgraph StorageNetwork ["Storage Docker Network (secureexam_db_net - Isolated)"]
+            PostgresContainer["PostgreSQL 16 Database Container\n- User: postgres (UID 999)\n- Internal Port: 5432\n- Strictly Isolated: NO Host Port Binding\n- Persistent Volume: pgdata:/var/lib/postgresql/data\n- Healthcheck: pg_isready -U secureexam_user"]
+        end
+    end
+
+    ClientDevice -->|HTTPS TLS 1.3 Request| ReverseProxyContainer
+    ReverseProxyContainer -->|Proxy / | FrontendContainer
+    ReverseProxyContainer -->|Proxy /api/ | BackendContainer
+    BackendContainer -->|SQLAlchemy asyncpg Connection Pool (Port 5432)| PostgresContainer

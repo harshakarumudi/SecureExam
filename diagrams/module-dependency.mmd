@@ -1,0 +1,96 @@
+﻿flowchart TD
+    %% Module Dependency & Coupling Diagram - SecureExam
+
+    subgraph SecurityCore ["Security Core Infrastructure"]
+        Config["core/config.py\n(Environment & Secrets)"]
+        Security["core/security.py\n(Argon2id, JWT encode/decode)"]
+        RateLimiter["core/rate_limiter.py\n(SlowAPI sliding window)"]
+        Sanitization["core/sanitizer.py\n(Bleach XSS filter)"]
+        AuditLogging["core/audit_logger.py\n(Tamper-evident event emitter)"]
+    end
+
+    subgraph DatabaseLayer ["Database Models & Sessions"]
+        DBModel_User["models/user.py"]
+        DBModel_Exam["models/exam.py"]
+        DBModel_Question["models/question.py"]
+        DBModel_Attempt["models/attempt.py"]
+        DBModel_Result["models/result.py"]
+        DBModel_Audit["models/audit.py"]
+        DBSession["database/session.py"]
+    end
+
+    subgraph Services ["Service Domain Layer"]
+        Svc_Auth["services/auth_service.py"]
+        Svc_Exam["services/exam_service.py"]
+        Svc_Question["services/question_service.py"]
+        Svc_Attempt["services/attempt_service.py"]
+        Svc_Evaluation["services/evaluation_service.py"]
+        Svc_Admin["services/admin_service.py"]
+    end
+
+    subgraph Routers ["API Controller Layer"]
+        Router_Auth["api/v1/auth.py"]
+        Router_Exams["api/v1/exams.py"]
+        Router_Questions["api/v1/questions.py"]
+        Router_Attempts["api/v1/attempts.py"]
+        Router_Results["api/v1/results.py"]
+        Router_Admin["api/v1/admin.py"]
+    end
+
+    %% Dependencies
+    Security --> Config
+    RateLimiter --> Config
+    AuditLogging --> DBModel_Audit
+    AuditLogging --> DBSession
+
+    DBSession --> Config
+    DBModel_Question --> DBModel_Exam
+    DBModel_Attempt --> DBModel_Exam
+    DBModel_Attempt --> DBModel_User
+    DBModel_Result --> DBModel_Attempt
+    DBModel_Result --> DBModel_User
+
+    Svc_Auth --> Security
+    Svc_Auth --> DBModel_User
+    Svc_Auth --> DBSession
+    Svc_Auth --> AuditLogging
+
+    Svc_Exam --> DBModel_Exam
+    Svc_Exam --> DBSession
+    Svc_Exam --> AuditLogging
+    Svc_Exam --> Sanitization
+
+    Svc_Question --> DBModel_Question
+    Svc_Question --> DBModel_Exam
+    Svc_Question --> DBSession
+    Svc_Question --> Sanitization
+
+    Svc_Attempt --> DBModel_Attempt
+    Svc_Attempt --> DBModel_Exam
+    Svc_Attempt --> DBSession
+    Svc_Attempt --> AuditLogging
+
+    Svc_Evaluation --> DBModel_Result
+    Svc_Evaluation --> DBModel_Attempt
+    Svc_Evaluation --> DBModel_Question
+    Svc_Evaluation --> DBSession
+    Svc_Evaluation --> AuditLogging
+
+    Svc_Admin --> DBModel_User
+    Svc_Admin --> DBModel_Exam
+    Svc_Admin --> DBModel_Audit
+    Svc_Admin --> DBSession
+    Svc_Admin --> AuditLogging
+
+    Router_Auth --> Svc_Auth
+    Router_Auth --> RateLimiter
+    Router_Exams --> Svc_Exam
+    Router_Exams --> Security
+    Router_Questions --> Svc_Question
+    Router_Questions --> Security
+    Router_Attempts --> Svc_Attempt
+    Router_Attempts --> Security
+    Router_Results --> Svc_Evaluation
+    Router_Results --> Security
+    Router_Admin --> Svc_Admin
+    Router_Admin --> Security

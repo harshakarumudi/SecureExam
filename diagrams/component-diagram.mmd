@@ -1,0 +1,94 @@
+﻿flowchart LR
+    %% Component Diagram - SecureExam
+
+    subgraph PresentationLayer ["Frontend Components (React + TS)"]
+        UI_Public["Public Component\n(Landing, Login, Register)"]
+        UI_Student["Student Component\n(ExamCatalog, Instructions,\nExamRoom, TimerDisplay, Results)"]
+        UI_Faculty["Faculty Component\n(ExamStudio, QuestionEditor,\nPreviewModal, Submissions)"]
+        UI_Admin["Admin Component\n(UserTable, RoleManager,\nAuditLogViewer, SystemMetrics)"]
+        UI_Shared["Shared UI Components\n(Modal, Toast, Spinner,\nProtectedRoutes, APIClient)"]
+    end
+
+    subgraph CrossCutting ["Cross-Cutting Security Subsystems"]
+        Sec_CORS["CORS Middleware"]
+        Sec_Headers["Security Headers (CSP, HSTS)"]
+        Sec_RateLimit["Rate Limiter (SlowAPI)"]
+        Sec_Validation["Pydantic v2 Schema Validator"]
+        Sec_AuthN["Token Manager & Argon2 Hasher"]
+        Sec_AuthZ["RBAC & Ownership Guard (BOLA/IDOR)"]
+        Sec_Audit["Audit Logger (Append-Only)"]
+    end
+
+    subgraph APIControllers ["API Routing Layer (FastAPI Routers)"]
+        Ctrl_Auth["auth_router.py"]
+        Ctrl_Users["users_router.py"]
+        Ctrl_Exams["exams_router.py"]
+        Ctrl_Attempts["attempts_router.py"]
+        Ctrl_Results["results_router.py"]
+        Ctrl_Audit["audit_router.py"]
+    end
+
+    subgraph ServiceComponents ["Core Service Subsystem"]
+        Svc_Auth["AuthService"]
+        Svc_User["UserService"]
+        Svc_Exam["ExamService"]
+        Svc_Question["QuestionService"]
+        Svc_Attempt["AttemptService (Server Timer)"]
+        Svc_Eval["EvaluationService (Score Engine)"]
+        Svc_Audit["AuditService"]
+    end
+
+    subgraph DALComponents ["Data Access Subsystem (SQLAlchemy ORM)"]
+        Repo_User["UserRepository"]
+        Repo_Exam["ExamRepository"]
+        Repo_Attempt["AttemptRepository"]
+        Repo_Result["ResultRepository"]
+        Repo_Audit["AuditRepository"]
+        DB_Engine["SQLAlchemy Engine & Session"]
+    end
+
+    subgraph DatabaseEngine ["Relational Database"]
+        DB[("PostgreSQL 16")]
+    end
+
+    UI_Public --> UI_Shared
+    UI_Student --> UI_Shared
+    UI_Faculty --> UI_Shared
+    UI_Admin --> UI_Shared
+
+    UI_Shared -->|REST API Requests| Sec_CORS
+    Sec_CORS --> Sec_Headers
+    Sec_Headers --> Sec_RateLimit
+    Sec_RateLimit --> Sec_Validation
+    Sec_Validation --> Sec_AuthN
+    Sec_AuthN --> Sec_AuthZ
+    Sec_AuthZ --> APIControllers
+
+    Ctrl_Auth --> Svc_Auth
+    Ctrl_Users --> Svc_User
+    Ctrl_Exams --> Svc_Exam
+    Ctrl_Exams --> Svc_Question
+    Ctrl_Attempts --> Svc_Attempt
+    Ctrl_Results --> Svc_Eval
+    Ctrl_Audit --> Svc_Audit
+
+    Svc_Auth --> Sec_Audit
+    Svc_Exam --> Sec_Audit
+    Svc_Attempt --> Sec_Audit
+    Svc_Eval --> Sec_Audit
+
+    Svc_Auth --> Repo_User
+    Svc_User --> Repo_User
+    Svc_Exam --> Repo_Exam
+    Svc_Question --> Repo_Exam
+    Svc_Attempt --> Repo_Attempt
+    Svc_Eval --> Repo_Attempt
+    Svc_Eval --> Repo_Result
+    Svc_Audit --> Repo_Audit
+
+    Repo_User --> DB_Engine
+    Repo_Exam --> DB_Engine
+    Repo_Attempt --> DB_Engine
+    Repo_Result --> DB_Engine
+    Repo_Audit --> DB_Engine
+    DB_Engine --> DB

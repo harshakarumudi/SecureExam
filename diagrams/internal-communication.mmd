@@ -1,0 +1,48 @@
+﻿sequenceDiagram
+    %% Internal Module Communication Lifecycle
+    autonumber
+    actor Student as Student (Browser)
+    actor Faculty as Faculty (Browser)
+    participant Auth as Auth & RBAC Interceptor
+    participant ExamSvc as ExamService
+    participant AttemptSvc as AttemptService
+    participant EvalSvc as EvaluationService
+    participant AuditSvc as AuditLogService
+    participant DB as PostgreSQL Database
+
+    Note over Faculty, DB: 1. Faculty Exam Authoring Flow
+    Faculty->>Auth: POST /api/v1/exams (Exam details + Questions)
+    Auth->>Auth: Verify JWT & Require Role FACULTY
+    Auth->>ExamSvc: create_exam(user_id, exam_payload)
+    ExamSvc->>DB: INSERT into exams & questions (Atomic Tx)
+    ExamSvc->>AuditSvc: log_event(EXAM_CREATED, faculty_id, exam_id)
+    AuditSvc->>DB: INSERT into audit_logs
+    ExamSvc-->>Faculty: HTTP 201 Created (Exam ID)
+
+    Note over Student, DB: 2. Student Examination Attempt Flow
+    Student->>Auth: POST /api/v1/exams/{id}/start
+    Auth->>Auth: Verify JWT & Require Role STUDENT
+    Auth->>AttemptSvc: start_attempt(student_id, exam_id)
+    AttemptSvc->>DB: Query exam (check active & published)
+    AttemptSvc->>AttemptSvc: Compute server-authoritative expires_at
+    AttemptSvc->>DB: INSERT into exam_attempts (status=IN_PROGRESS)
+    AttemptSvc->>AuditSvc: log_event(ATTEMPT_STARTED, student_id, attempt_id)
+    AuditSvc->>DB: INSERT into audit_logs
+    AttemptSvc-->>Student: HTTP 200 OK (attempt_id, expires_at, sanitized questions)
+
+    Note over Student, DB: 3. Authoritative Submission & Tamper-Proof Evaluation
+    Student->>Auth: POST /api/v1/attempts/{id}/submit (selected_options)
+    Auth->>Auth: Verify JWT & Enforce Ownership (attempt.student_id == user.id)
+    Auth->>AttemptSvc: submit_attempt(attempt_id, answers)
+    AttemptSvc->>AttemptSvc: Verify server_time <= expires_at + grace_period
+    alt Expired Attempt
+        AttemptSvc-->>Student: HTTP 400 Bad Request (Attempt Expired)
+    else Valid Attempt Window
+        AttemptSvc->>EvalSvc: evaluate_and_seal(attempt_id, answers)
+        EvalSvc->>DB: Fetch official question keys & marks
+        EvalSvc->>EvalSvc: Calculate total score & percentage (Server-Side)
+        EvalSvc->>DB: INSERT into results & UPDATE attempt (status=COMPLETED)
+        EvalSvc->>AuditSvc: log_event(ATTEMPT_SUBMITTED, student_id, attempt_id)
+        AuditSvc->>DB: INSERT into audit_logs
+        EvalSvc-->>Student: HTTP 200 OK (Verified Result Summary)
+    end
