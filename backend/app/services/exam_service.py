@@ -1,11 +1,11 @@
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.app.core.sanitizer import sanitize_html
-from backend.app.models.exam import Exam, ExamStatus
+from backend.app.models.exam import Exam, ExamAssignment, ExamStatus
 from backend.app.models.question import Question, QuestionOption
 from backend.app.models.user import User, UserRole
 from backend.app.schemas.exam import ExamCreate, ExamUpdate
@@ -76,17 +76,25 @@ class ExamService:
         return exams
 
     @staticmethod
-    async def list_published_exams_for_students(db: AsyncSession) -> list[Exam]:
+    async def list_published_exams_for_students(db: AsyncSession, student_id: int | None = None) -> list[Exam]:
         result = await db.execute(
             select(Exam)
-            .options(selectinload(Exam.questions))
+            .options(
+                selectinload(Exam.questions),
+                selectinload(Exam.assignments)
+            )
             .where(Exam.status == ExamStatus.PUBLISHED)
             .order_by(Exam.created_at.desc())
         )
         exams = result.scalars().all()
+        filtered = []
         for ex in exams:
             ex.question_count = len(ex.questions)
-        return exams
+            if not ex.assignments:
+                filtered.append(ex)
+            elif student_id is not None and any(a.student_id == student_id for a in ex.assignments):
+                filtered.append(ex)
+        return filtered
 
     @staticmethod
     async def update_exam(db: AsyncSession, exam_id: int, exam_in: ExamUpdate, current_user: User, ip_address: str | None = None) -> Exam:
@@ -230,4 +238,73 @@ class ExamService:
 
         await db.delete(q)
         await db.commit()
+
+    @staticmethod
+    async def assign_students_to_exam(
+        db: AsyncSession,
+        exam_id: int,
+        student_ids: list[int],
+        current_user: User,
+        ip_address: str | None = None
+    ) -> list[dict]:
+        exam = await ExamService.get_exam_by_id(db, exam_id)
+        if exam.created_by != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to assign students to this exam."
+            )
+
+        # Clear existing assignments
+        await db.execute(delete(ExamAssignment).where(ExamAssignment.exam_id == exam_id))
+
+        # Insert new assignments
+        new_assignments = []
+        for sid in student_ids:
+            s_res = await db.execute(select(User).where(User.id == sid, User.role == UserRole.STUDENT))
+            student = s_res.scalars().first()
+            if student:
+                assignment = ExamAssignment(exam_id=exam_id, student_id=student.id)
+                db.add(assignment)
+                new_assignments.append(assignment)
+
+        await db.commit()
+
+        await AuditService.log_event(
+            db=db,
+            action="EXAM_STUDENTS_ASSIGNED",
+            actor_id=current_user.id,
+            actor_role=current_user.role.value,
+            resource_id=str(exam_id),
+            ip_address=ip_address,
+            status="SUCCESS",
+            details=f"Assigned {len(new_assignments)} students to exam '{exam.title}'"
+        )
+
+        return await ExamService.get_exam_assignments(db, exam_id, current_user)
+
+    @staticmethod
+    async def get_exam_assignments(db: AsyncSession, exam_id: int, current_user: User) -> list[dict]:
+        exam = await ExamService.get_exam_by_id(db, exam_id)
+        if exam.created_by != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized.")
+
+        res = await db.execute(
+            select(ExamAssignment)
+            .options(selectinload(ExamAssignment.student))
+            .where(ExamAssignment.exam_id == exam_id)
+            .order_by(ExamAssignment.assigned_at.asc())
+        )
+        assignments = res.scalars().all()
+        return [
+            {
+                "id": a.id,
+                "exam_id": a.exam_id,
+                "student_id": a.student_id,
+                "student_name": a.student.full_name if a.student else "Unknown",
+                "student_email": a.student.email if a.student else "Unknown",
+                "assigned_at": a.assigned_at
+            }
+            for a in assignments
+        ]
+
 

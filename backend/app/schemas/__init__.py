@@ -1,3 +1,4 @@
+from backend.app.schemas.assignment import ExamAssignmentOut, ExamAssignRequest
 from backend.app.schemas.attempt import (
     AnswerSubmissionItem,
     AttemptOut,
@@ -42,6 +43,8 @@ __all__ = [
     "AttemptStartResponse",
     "AttemptSubmitRequest",
     "AuditLogOut",
+    "ExamAssignRequest",
+    "ExamAssignmentOut",
     "ExamBase",
     "ExamCandidateOut",
     "ExamCreate",

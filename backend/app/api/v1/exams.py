@@ -10,6 +10,7 @@ from backend.app.api.deps import (
 )
 from backend.app.models.exam import ExamStatus
 from backend.app.models.user import User, UserRole
+from backend.app.schemas.assignment import ExamAssignmentOut, ExamAssignRequest
 from backend.app.schemas.exam import (
     ExamCandidateOut,
     ExamCreate,
@@ -45,7 +46,7 @@ async def list_exams(
             faculty_id=current_user.id,
             is_admin=(current_user.role == UserRole.ADMIN)
         )
-    return await ExamService.list_published_exams_for_students(db)
+    return await ExamService.list_published_exams_for_students(db, student_id=current_user.id)
 
 
 @router.get("/available", response_model=list[ExamCandidateOut])
@@ -53,7 +54,8 @@ async def list_available_exams(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    return await ExamService.list_published_exams_for_students(db)
+    student_id = current_user.id if current_user.role == UserRole.STUDENT else None
+    return await ExamService.list_published_exams_for_students(db, student_id=student_id)
 
 
 @router.get("/{id}", response_model=ExamDetailOut)
@@ -110,3 +112,31 @@ async def delete_question(
     db: AsyncSession = Depends(get_db)
 ):
     await ExamService.delete_question(db, question_id, current_user=current_user)
+
+
+@router.post("/{id}/assignments", response_model=list[ExamAssignmentOut])
+async def assign_students(
+    id: int,
+    assignment_in: ExamAssignRequest,
+    request: Request,
+    current_user: User = Depends(require_roles([UserRole.FACULTY, UserRole.ADMIN])),
+    db: AsyncSession = Depends(get_db)
+):
+    ip = get_client_ip(request)
+    return await ExamService.assign_students_to_exam(
+        db,
+        exam_id=id,
+        student_ids=assignment_in.student_ids,
+        current_user=current_user,
+        ip_address=ip
+    )
+
+
+@router.get("/{id}/assignments", response_model=list[ExamAssignmentOut])
+async def get_assignments(
+    id: int,
+    current_user: User = Depends(require_roles([UserRole.FACULTY, UserRole.ADMIN])),
+    db: AsyncSession = Depends(get_db)
+):
+    return await ExamService.get_exam_assignments(db, exam_id=id, current_user=current_user)
+

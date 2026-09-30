@@ -1,6 +1,7 @@
 import {
   User,
   Exam,
+  ExamAssignment,
   AttemptStartResponse,
   StudentAnswerSubmission,
   Result,
@@ -127,6 +128,18 @@ export const api = {
     request<void>(`/exams/questions/${questionId}`, {
       method: "DELETE",
     }),
+
+  // Exam Assignments
+  getExamAssignments: (examId: number) =>
+    request<ExamAssignment[]>(`/exams/${examId}/assignments`),
+
+  assignStudentsToExam: (examId: number, studentIds: number[]) =>
+    request<ExamAssignment[]>(`/exams/${examId}/assignments`, {
+      method: "POST",
+      body: JSON.stringify({ student_ids: studentIds }),
+    }),
+
+  getStudents: () => request<User[]>("/users/students"),
 
   // Attempts
   startAttempt: (examId: number) =>

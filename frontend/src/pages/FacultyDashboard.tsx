@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Exam, Result } from "../types";
+import { Exam, Result, User } from "../types";
 import { api } from "../services/api";
 import { Modal } from "../components/Modal";
 import {
@@ -9,6 +9,7 @@ import {
   Trash2,
   Users,
   AlertCircle,
+  UserCheck,
 } from "lucide-react";
 
 export const FacultyDashboard: React.FC = () => {
@@ -21,10 +22,17 @@ export const FacultyDashboard: React.FC = () => {
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
 
   // Active selected exam
   const [activeExam, setActiveExam] = useState<Exam | null>(null);
   const [submissions, setSubmissions] = useState<Result[]>([]);
+
+  // Student Assignment State
+  const [students, setStudents] = useState<User[]>([]);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
+  const [studentSearch, setStudentSearch] = useState("");
+  const [assignLoading, setAssignLoading] = useState(false);
 
   // Create Exam Form state
   const [title, setTitle] = useState("");
@@ -126,6 +134,38 @@ export const FacultyDashboard: React.FC = () => {
       setShowSubmissionsModal(true);
     } catch (err: any) {
       alert(err.message);
+    }
+  };
+
+  const openAssignModal = async (exam: Exam) => {
+    try {
+      setActiveExam(exam);
+      setAssignLoading(true);
+      setShowAssignModal(true);
+      const [allStuds, currentAssignments] = await Promise.all([
+        api.getStudents(),
+        api.getExamAssignments(exam.id),
+      ]);
+      setStudents(allStuds);
+      setSelectedStudentIds(currentAssignments.map((a) => a.student_id));
+    } catch (err: any) {
+      alert(err.message || "Failed to load student assignments.");
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+
+  const handleSaveAssignments = async () => {
+    if (!activeExam) return;
+    try {
+      setAssignLoading(true);
+      await api.assignStudentsToExam(activeExam.id, selectedStudentIds);
+      setShowAssignModal(false);
+      fetchExams();
+    } catch (err: any) {
+      alert(err.message || "Failed to save student assignments.");
+    } finally {
+      setAssignLoading(false);
     }
   };
 
@@ -273,6 +313,13 @@ export const FacultyDashboard: React.FC = () => {
                       className="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition"
                     >
                       <Users className="w-4 h-4 inline" /> Submissions
+                    </button>
+                    <button
+                      onClick={() => openAssignModal(exam)}
+                      title="Assign Exam to Students"
+                      className="p-1.5 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+                    >
+                      <UserCheck className="w-4 h-4 inline" /> Assign Students
                     </button>
                     <button
                       onClick={() => handleDeleteExam(exam.id)}
@@ -632,6 +679,123 @@ export const FacultyDashboard: React.FC = () => {
                 </tbody>
               </table>
             )}
+          </div>
+        </Modal>
+      )}
+
+      {/* Assign Students Modal */}
+      {showAssignModal && activeExam && (
+        <Modal
+          isOpen={showAssignModal}
+          onClose={() => setShowAssignModal(false)}
+          title={`Assign Students: ${activeExam.title}`}
+          maxWidth="max-w-2xl"
+        >
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex items-center justify-between">
+              <div>
+                <span className="font-bold">Assignment Policy: </span>
+                {selectedStudentIds.length === 0 ? (
+                  <span>No specific students selected. Exam is <strong>open to all students</strong>.</span>
+                ) : (
+                  <span>Restricted to <strong>{selectedStudentIds.length}</strong> assigned student(s).</span>
+                )}
+              </div>
+              <div className="space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudentIds(students.map((s) => s.id))}
+                  className="px-2 py-1 bg-white border border-amber-300 rounded font-semibold text-amber-800 hover:bg-amber-100 text-xs transition"
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudentIds([])}
+                  className="px-2 py-1 bg-white border border-amber-300 rounded font-semibold text-amber-800 hover:bg-amber-100 text-xs transition"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <input
+                type="text"
+                placeholder="Search students by name or email..."
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div className="max-h-[300px] overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
+              {students.length === 0 ? (
+                <p className="p-4 text-center text-xs text-slate-400">Loading enrolled students...</p>
+              ) : (
+                students
+                  .filter(
+                    (s) =>
+                      s.full_name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                      s.email.toLowerCase().includes(studentSearch.toLowerCase())
+                  )
+                  .map((student) => {
+                    const isChecked = selectedStudentIds.includes(student.id);
+                    return (
+                      <label
+                        key={student.id}
+                        className={`flex items-center justify-between px-4 py-3 cursor-pointer transition ${
+                          isChecked ? "bg-indigo-50/60" : "hover:bg-slate-50"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedStudentIds([...selectedStudentIds, student.id]);
+                              } else {
+                                setSelectedStudentIds(selectedStudentIds.filter((id) => id !== student.id));
+                              }
+                            }}
+                            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <div>
+                            <p className="font-semibold text-xs text-slate-900">{student.full_name}</p>
+                            <p className="text-[11px] text-slate-500">{student.email}</p>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            isChecked ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"
+                          }`}
+                        >
+                          {isChecked ? "ASSIGNED" : "UNASSIGNED"}
+                        </span>
+                      </label>
+                    );
+                  })
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowAssignModal(false)}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={assignLoading}
+                onClick={handleSaveAssignments}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition disabled:opacity-50"
+              >
+                {assignLoading ? "Saving..." : "Save Assignments"}
+              </button>
+            </div>
           </div>
         </Modal>
       )}

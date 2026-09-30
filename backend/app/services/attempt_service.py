@@ -1,12 +1,12 @@
 from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.app.models.attempt import AttemptStatus, ExamAttempt
-from backend.app.models.exam import Exam, ExamStatus
+from backend.app.models.exam import Exam, ExamAssignment, ExamStatus
 from backend.app.models.question import Question
 from backend.app.models.user import User
 from backend.app.schemas.attempt import AttemptStartResponse
@@ -30,7 +30,25 @@ class AttemptService:
                 detail="Examination is not available for attempts."
             )
 
-        # 2. Check for active or already completed attempts
+        # 2. Check student assignment eligibility (if specific assignments configured)
+        assign_count_res = await db.execute(
+            select(func.count(ExamAssignment.id)).where(ExamAssignment.exam_id == exam_id)
+        )
+        total_assignments = assign_count_res.scalar() or 0
+        if total_assignments > 0:
+            is_assigned_res = await db.execute(
+                select(ExamAssignment).where(
+                    ExamAssignment.exam_id == exam_id,
+                    ExamAssignment.student_id == student.id
+                )
+            )
+            if not is_assigned_res.scalars().first():
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You are not assigned to take this examination."
+                )
+
+        # 3. Check for active or already completed attempts
         existing_res = await db.execute(
             select(ExamAttempt).where(
                 ExamAttempt.exam_id == exam_id,

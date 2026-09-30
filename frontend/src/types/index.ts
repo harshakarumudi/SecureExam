@@ -91,3 +91,13 @@ export interface AuditLog {
   details?: string;
 }
 
+export interface ExamAssignment {
+  id: number;
+  exam_id: number;
+  student_id: number;
+  student_name: string;
+  student_email: string;
+  assigned_at: string;
+}
+
+

@@ -2,7 +2,7 @@ import enum
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.core.database import Base
@@ -54,4 +54,25 @@ class Exam(Base):
     questions: Mapped[list["Question"]] = relationship("Question", back_populates="exam", cascade="all, delete-orphan", order_by="Question.order_index", lazy="selectin")
     attempts: Mapped[list["ExamAttempt"]] = relationship("ExamAttempt", back_populates="exam", cascade="all, delete-orphan")
     results: Mapped[list["Result"]] = relationship("Result", back_populates="exam", cascade="all, delete-orphan")
+    assignments: Mapped[list["ExamAssignment"]] = relationship("ExamAssignment", back_populates="exam", cascade="all, delete-orphan", lazy="selectin")
+
+
+class ExamAssignment(Base):
+    __tablename__ = "exam_assignments"
+    __table_args__ = (
+        UniqueConstraint("exam_id", "student_id", name="uq_exam_student_assignment"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    exam_id: Mapped[int] = mapped_column(Integer, ForeignKey("exams.id", ondelete="CASCADE"), nullable=False, index=True)
+    student_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    assigned_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False
+    )
+
+    # Relationships
+    exam: Mapped["Exam"] = relationship("Exam", back_populates="assignments")
+    student: Mapped["User"] = relationship("User", foreign_keys=[student_id], lazy="selectin")
 
