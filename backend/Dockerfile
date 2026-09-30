@@ -20,7 +20,8 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/home/appuser/.local/bin:$PATH"
+    PATH="/home/appuser/.local/bin:$PATH" \
+    PYTHONPATH="/app"
 
 # Create unprivileged system user and group (UID 10001)
 RUN groupadd -g 10001 appgroup && \
@@ -29,11 +30,11 @@ RUN groupadd -g 10001 appgroup && \
 # Copy installed Python packages from builder
 COPY --from=builder /root/.local /home/appuser/.local
 
-# Copy application source
-COPY --chown=appuser:appgroup . /app
+# Copy application source into /app/backend to preserve module hierarchy
+COPY --chown=appuser:appgroup . /app/backend
 
 # Ensure proper permissions
-RUN chown -R appuser:appgroup /home/appuser && \
+RUN chown -R appuser:appgroup /home/appuser /app && \
     chmod -R 750 /app
 
 USER appuser
