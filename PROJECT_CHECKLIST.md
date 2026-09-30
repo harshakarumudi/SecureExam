@@ -1,4 +1,4 @@
-﻿# SecureExam — Master Project Checklist
+# SecureExam — Master Project Checklist
 
 Status Key:
 - `[ ]` Not Started
@@ -47,35 +47,35 @@ Status Key:
 
 ## C. Functional Features
 ### Student Portal
-- [ ] Registration with input validation
-- [ ] Login and session management
-- [ ] Logout
-- [ ] View profile
-- [ ] View available published examinations
-- [ ] View exam instructions and details
-- [ ] Start exam attempt (authoritative timer initiation)
-- [ ] Single answer MCQ question interface with navigation
-- [ ] Submit examination
-- [ ] View immediate result and performance summary
-- [ ] View history of previous attempts
+- [x] Registration with input validation
+- [x] Login and session management
+- [x] Logout
+- [x] View profile
+- [x] View available published examinations
+- [x] View exam instructions and details
+- [x] Start exam attempt (authoritative timer initiation)
+- [x] Single answer MCQ question interface with navigation
+- [x] Submit examination
+- [x] View immediate result and performance summary
+- [x] View history of previous attempts
 
 ### Faculty Studio
-- [ ] Login and faculty dashboard
-- [ ] Create examinations (title, description, marks, duration, dates)
-- [ ] Edit owned examinations
-- [ ] Delete owned examinations
-- [ ] Create, edit, and delete questions with options and explanations
-- [ ] Configure marks per question
-- [ ] Publish / unpublish examinations
-- [ ] Preview exam paper
-- [ ] View student attempts and grade breakdown
+- [x] Login and faculty dashboard
+- [x] Create examinations (title, description, marks, duration, dates)
+- [x] Edit owned examinations
+- [x] Delete owned examinations
+- [x] Create, edit, and delete questions with options and explanations
+- [x] Configure marks per question
+- [x] Publish / unpublish examinations
+- [x] Preview exam paper
+- [x] View student attempts and grade breakdown
 
 ### Admin Command Center
-- [ ] Login and admin dashboard
-- [ ] User management (view, activate, deactivate, role assignment)
-- [ ] System-wide exam oversight
-- [ ] Security audit log viewer with filtering
-- [ ] Security event monitoring
+- [x] Login and admin dashboard
+- [x] User management (view, activate, deactivate, role assignment)
+- [x] System-wide exam oversight
+- [x] Security audit log viewer with filtering
+- [x] Security event monitoring
 
 ---
 

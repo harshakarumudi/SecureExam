@@ -44,10 +44,10 @@ class AttemptService:
                     detail="You have already submitted this examination."
                 )
             if existing_attempt.status == AttemptStatus.IN_PROGRESS:
-                # If existing attempt has not expired, resume it
                 now = datetime.now(timezone.utc)
-                if now < existing_attempt.expires_at:
-                    rem_secs = max(0, int((existing_attempt.expires_at - now).total_seconds()))
+                exp_at = existing_attempt.expires_at.replace(tzinfo=timezone.utc) if existing_attempt.expires_at.tzinfo is None else existing_attempt.expires_at
+                if now < exp_at:
+                    rem_secs = max(0, int((exp_at - now).total_seconds()))
                     candidate_qs = AttemptService._build_candidate_questions(exam.questions)
                     return AttemptStartResponse(
                         attempt_id=existing_attempt.id,
@@ -140,3 +140,4 @@ class AttemptService:
         if attempt.student_id != student.id and student.role != "ADMIN":
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
         return attempt
+

@@ -210,8 +210,10 @@ class ExamService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="At least one option must be marked as correct.")
 
         await db.commit()
-        await db.refresh(question)
-        return question
+        res = await db.execute(
+            select(Question).options(selectinload(Question.options)).where(Question.id == question.id)
+        )
+        return res.scalars().first()
 
     @staticmethod
     async def delete_question(db: AsyncSession, question_id: int, current_user: User) -> None:
@@ -224,3 +226,4 @@ class ExamService:
 
         await db.delete(q)
         await db.commit()
+

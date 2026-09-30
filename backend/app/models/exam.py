@@ -48,6 +48,7 @@ class Exam(Base):
 
     # Relationships
     creator: Mapped["User"] = relationship("User", back_populates="created_exams")
-    questions: Mapped[List["Question"]] = relationship("Question", back_populates="exam", cascade="all, delete-orphan", order_by="Question.order_index")
+    questions: Mapped[List["Question"]] = relationship("Question", back_populates="exam", cascade="all, delete-orphan", order_by="Question.order_index", lazy="selectin")
     attempts: Mapped[List["ExamAttempt"]] = relationship("ExamAttempt", back_populates="exam", cascade="all, delete-orphan")
     results: Mapped[List["Result"]] = relationship("Result", back_populates="exam", cascade="all, delete-orphan")
+

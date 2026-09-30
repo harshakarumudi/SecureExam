@@ -54,9 +54,9 @@ class EvaluationService:
 
         # 4. Authoritative Server Timer Expiration Check
         now = datetime.now(timezone.utc)
-        # 15 seconds network latency grace period
+        expires_at = attempt.expires_at.replace(tzinfo=timezone.utc) if attempt.expires_at.tzinfo is None else attempt.expires_at
         grace_period = timedelta(seconds=15)
-        if now > attempt.expires_at + grace_period:
+        if now > expires_at + grace_period:
             attempt.status = AttemptStatus.EXPIRED
             await db.commit()
 
@@ -160,3 +160,4 @@ class EvaluationService:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this result.")
 
         return ResultOut.model_validate(db_res)
+

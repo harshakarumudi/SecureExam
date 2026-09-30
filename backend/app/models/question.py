@@ -24,7 +24,8 @@ class Question(Base):
         "QuestionOption",
         back_populates="question",
         cascade="all, delete-orphan",
-        order_by="QuestionOption.order_index"
+        order_by="QuestionOption.order_index",
+        lazy="selectin"
     )
 
 

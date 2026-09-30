@@ -1,12 +1,12 @@
-﻿# SecureExam — Project Status
+# SecureExam — Project Status
 
 ## Academic Overview
 - **Project Name**: SecureExam (Secure Online Examination Management System)
 - **Institution**: Amrita School of Computing
 - **Course**: Secure Software Engineering
 - **Course Outcomes**: CO1, CO2, CO3, CO4
-- **Current Phase**: Milestone 4 — Database and Backend Foundation (COMPLETED)
-- **Next Phase**: Milestone 5 — Complete Working Website
+- **Current Phase**: Milestone 6 — Security, Threat Modeling & Automated Testing
+- **Next Phase**: Milestone 7 — DevSecOps, Client Change Request & Refactoring
 
 ---
 
@@ -19,7 +19,7 @@
   - pip: `26.0.1` (Verified)
   - Git: `2.49.0.windows.1` (Configured: `varshithh19`)
   - Docker CLI: `29.8.0` (Verified)
-  - Database Engine: PostgreSQL 16 ready (Docker Compose container setup with asyncpg/SQLAlchemy 2.0; SQLite fallback configured for rapid offline test isolation)
+  - Database Engine: PostgreSQL 16 ready (Docker Compose container setup with asyncpg/psycopg/SQLAlchemy 2.0; SQLite fallback configured for rapid offline test isolation)
 
 ---
 
@@ -31,9 +31,9 @@
 | **2** | System Model and Architecture | **[x] Completed** | 2026-09-30 | docs: define system architecture, module design, and structural diagrams |
 | **3** | Use Case Model | **[x] Completed** | 2026-09-30 | docs: define comprehensive use case specifications and actor interaction diagram |
 | **4** | Database and ER Model | **[x] Completed** | 2026-09-30 | feat(backend): implement relational models, database schema, security foundation, and API routers |
-| **5** | Technology Implementation | [ ] Not Started | Pending | - |
-| **6** | Authentication | [ ] Not Started | Pending | - |
-| **7** | Authorization / RBAC | [ ] Not Started | Pending | - |
+| **5** | Technology Implementation & Working Website | **[x] Completed** | 2026-09-30 | feat(web): build complete working SecureExam website (frontend, backend, student, faculty, admin) |
+| **6** | Authentication, RBAC, Core Exam, Defensive Security | **[x] Completed** | 2026-09-30 | Integrated with Milestone 4/5 & Milestone 6 verification |
+| **7** | Threat Modeling & Formal Analysis | [ ] In Progress | 2026-09-30 | - |
 | **8** | Core Examination System | [ ] Not Started | Pending | - |
 | **9** | Secure Exam Timer | [ ] Not Started | Pending | - |
 | **10** | Result Security | [ ] Not Started | Pending | - |

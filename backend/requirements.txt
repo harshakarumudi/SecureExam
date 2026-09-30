@@ -1,4 +1,4 @@
-﻿# SecureExam Backend Dependencies
+# SecureExam Backend Dependencies
 # Pinned versions for reproducible, secure builds
 
 # Web Framework & Server
