@@ -47,9 +47,9 @@ The system initializes with three default accounts for immediate role testing:
 
 | Role | Email Address | Password | Permissions |
 | :--- | :--- | :--- | :--- |
-| **System Admin** | `admin@secureexam.edu` | `Admin@123456` | Full platform oversight, audit log streams, user activation/roles |
-| **Faculty Member** | `faculty@secureexam.edu` | `Faculty@123456` | Create/edit owned exams, question banking, view candidate results |
-| **Student** | `student@secureexam.edu` | `Student@123456` | Discover published exams, take timed attempts, view personal results |
+| **System Admin** | `admin@secureexam.edu` | `AdminPass123!@#` | Full platform oversight, audit log streams, user activation/roles |
+| **Faculty Member** | `faculty@secureexam.edu` | `FacultyPass123!@#` | Create/edit owned exams, question banking, view candidate results |
+| **Student** | `student@secureexam.edu` | `StudentPass123!@#` | Discover published exams, take timed attempts, view personal results |
 
 ---
 
@@ -60,9 +60,9 @@ Launch the entire containerized architecture (Frontend, Backend, and PostgreSQL)
 ```bash
 docker compose up --build
 ```
-- **Web Application UI**: `http://localhost` (or `http://localhost:80`)
-- **API Swagger Documentation**: `http://localhost/api/docs`
-- **Backend Health Check**: `http://localhost/api/v1/health`
+- **Web Application UI**: `http://localhost:3000` (mapped to port 3000 to prevent port 80 collision with existing host services)
+- **API Swagger Documentation**: `http://localhost:8000/docs`
+- **Backend Health Check**: `http://localhost:8000/api/v1/health`
 
 ### 4.2 Running Locally for Development
 

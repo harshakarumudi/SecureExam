@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-secureuser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SuperSecureP@ss2026!}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SuperSecurePass2026_ExamDB}
       POSTGRES_DB: ${POSTGRES_DB:-secureexam}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -27,13 +27,15 @@ services:
       dockerfile: Dockerfile
     container_name: secureexam_backend
     restart: unless-stopped
+    ports:
+      - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-secureuser}:${POSTGRES_PASSWORD:-SuperSecureP@ss2026!}@postgres:5432/${POSTGRES_DB:-secureexam}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-secureuser}:${POSTGRES_PASSWORD:-SuperSecurePass2026_ExamDB}@postgres:5432/${POSTGRES_DB:-secureexam}
       SECRET_KEY: ${SECRET_KEY:-09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7}
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 60
       ENVIRONMENT: production
-      ALLOWED_ORIGINS: http://localhost,http://localhost:80,http://frontend
+      ALLOWED_ORIGINS: http://localhost,http://localhost:80,http://localhost:3000,http://localhost:8000,http://frontend
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,7 +56,7 @@ services:
     container_name: secureexam_frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "3000:80"
     depends_on:
       backend:
         condition: service_healthy
