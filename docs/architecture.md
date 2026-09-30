@@ -24,55 +24,69 @@ SecureExam is architected as a **Security-Hardened Modular Monolith**, striking 
 
 ## 2. Logical Layered Architecture
 
+SecureExam is structured into **7 logical layers/tiers**, establishing strict separation of concerns, defense-in-depth, and clear trust boundaries:
+
+1. **Ingress Perimeter** (Layer 1)
+2. **Presentation Layer** (Layer 2)
+3. **API Controller Layer** (Layer 3)
+4. **Cross-Cutting Security Subsystems** (Layer 4)
+5. **Core Service Layer** (Layer 5)
+6. **Data Access Layer** (Layer 6)
+7. **Isolated Relational Persistence Layer** (Layer 7)
+
 ```mermaid
 flowchart TD
-    subgraph Layer0 ["0. Ingress & Perimeter Layer"]
+    subgraph Layer1 ["1. Ingress & Perimeter Layer"]
         ReverseProxy["NGINX / Reverse Proxy\n(HTTPS TLS 1.3 Termination, CSP/HSTS Headers, DoS Mitigation)"]
     end
 
-    subgraph Layer1 ["1. Presentation Layer (Browser Client)"]
+    subgraph Layer2 ["2. Presentation Layer (Browser Client)"]
         ReactApp["React 18 SPA (TypeScript + Vite + Tailwind CSS)\n- Client State Management\n- Accessible Question Palette\n- Visual Synchronized Countdown Timer"]
     end
 
-    subgraph Layer2 ["2. API Gateway & Controller Layer (FastAPI)"]
-        CORS_RL["CORS & Rate Limiter Middleware (SlowAPI)"]
-        AuthZ_Dep["OAuth2 / JWT Authentication & RBAC Dependencies"]
-        APIRouters["FastAPI API Routers (/api/v1/auth, /users, /exams, /attempts, /results, /admin)"]
+    subgraph Layer3 ["3. API Gateway & Controller Layer (FastAPI)"]
+        APIRouters["FastAPI API Routers (/api/v1/auth, /users, /exams, /attempts, /results, /admin)\n- Request Deserialization & Routing\n- HTTP Response Formatting"]
     end
 
-    subgraph Layer3 ["3. Business & Security Service Layer"]
+    subgraph Layer4 ["4. Cross-Cutting Security Subsystems"]
+        CORS_RL["CORS & Rate Limiter Middleware (SlowAPI)"]
+        AuthZ_Dep["OAuth2 / JWT Authentication & RBAC Dependencies"]
+        Validator["Pydantic v2 Strict Input Validators & Bleach Sanitizer"]
+    end
+
+    subgraph Layer5 ["5. Core Business & Security Service Layer"]
         AuthSvc["AuthService"]
         ExamSvc["ExamService"]
-        AttemptSvc["AttemptService (Server Timer)"]
+        AttemptSvc["AttemptService (Authoritative Timer)"]
         EvalSvc["EvaluationService (Tamper-Proof Grading)"]
         AuditSvc["AuditLogService"]
     end
 
-    subgraph Layer4 ["4. Data Access & ORM Layer (SQLAlchemy 2.0)"]
+    subgraph Layer6 ["6. Data Access & ORM Layer (SQLAlchemy 2.0)"]
         ORM["SQLAlchemy Declarative Models & Async Session Engine\n(Parameterized SQL Prepared Statements)"]
     end
 
-    subgraph Layer5 ["5. Persistence Layer (Storage Engine)"]
-        Postgres[("PostgreSQL 16 Relational Database\n(Isolated Docker Network, No Public Ports)")]
+    subgraph Layer7 ["7. Isolated Relational Persistence Layer"]
+        Postgres[("PostgreSQL 16 Relational Database\n(Isolated Docker Network, No Public Host Ports)")]
     end
 
     ReverseProxy --> ReactApp
     ReactApp -->|REST API over TLS| ReverseProxy
-    ReverseProxy --> CORS_RL
-    CORS_RL --> AuthZ_Dep
-    AuthZ_Dep --> APIRouters
-    APIRouters --> Layer3
-    Layer3 --> Layer4
-    Layer4 --> Postgres
+    ReverseProxy --> Layer4
+    Layer4 --> APIRouters
+    APIRouters --> Layer5
+    Layer5 --> Layer6
+    Layer6 --> Postgres
 ```
 
 ### 2.1 Layer Responsibilities & Isolation
-- **Presentation Layer**: Implemented using React 18 and TypeScript. Responsible solely for user interface rendering, form submission, and local client state. Does NOT perform authorization or final score calculations.
-- **API & Controller Layer**: Implemented via FastAPI APIRouter modules. Responsible for request dispatching, input deserialization, Pydantic v2 validation, HTTP response formatting, and status codes.
-- **Security Middleware & Interceptor Layer**: Sits between HTTP ingress and controllers. Intercepts incoming requests to apply CORS policies, inspect bearer JWTs, enforce rate limits, and sanitize dangerous inputs.
-- **Service Layer**: Encapsulates pure business logic, workflows, cryptographic operations, authoritative timer calculations, and evaluation algorithms. Contains zero controller/HTTP coupling.
-- **Data Access Layer**: Implemented via SQLAlchemy 2.0. Translates domain entities into parameterized SQL queries, guaranteeing immunity against SQL injection vulnerabilities.
-- **Persistence Layer**: PostgreSQL 16 relational database enforcing relational integrity, foreign key cascading constraints, unique constraints, and ACID transactions.
+1. **Ingress Perimeter (Layer 1)**: NGINX reverse proxy terminating TLS 1.3, mitigating flood attacks, and appending security headers (`Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, `HSTS`).
+2. **Presentation Layer (Layer 2)**: React 18 Single-Page Application (TypeScript + Tailwind CSS). Responsible solely for accessible UI rendering, candidate question palette interaction, and visual countdown timer display. Never computes authoritative marks or validates privileges.
+3. **API Controller Layer (Layer 3)**: FastAPI APIRouter endpoints managing HTTP request lifecycles, route dispatching, response code serialization, and standard error translation.
+4. **Cross-Cutting Security Subsystems (Layer 4)**: Interceptor and middleware pipeline enforcing CORS origin validation, brute-force rate limiting (SlowAPI), token claim extraction, RBAC authorization gates, and HTML sanitization (`bleach`).
+5. **Core Service Layer (Layer 5)**: Encapsulates all domain business logic, cryptographic workflows (Argon2id password hashing), authoritative exam timer enforcement (`expires_at`), and tamper-proof server-side score calculation. Zero dependency on HTTP frameworks.
+6. **Data Access Layer (Layer 6)**: SQLAlchemy 2.0 ORM managing entity relationships, session lifecycles, and translating repository calls into 100% parameterized SQL prepared statements.
+7. **Isolated Relational Persistence Layer (Layer 7)**: PostgreSQL 16 relational database engine residing on an isolated internal network (`db-net`), strictly forbidding public host port exposure and enforcing transactional ACID consistency.
 
 ---
 
@@ -225,3 +239,4 @@ flowchart TD
 ### 6.3 Coupling Hotspots & Future Dependency Reduction Plan
 - **Current Coupling Hotspot**: `EvaluationService` interacts directly with `AttemptRepository`, `QuestionRepository`, and `ResultRepository`.
 - **Target for Phase 36 (Dependency Reduction)**: Decouple evaluation into an isolated `EvaluationStrategy` interface that receives pure data records rather than managing multi-table repository transactions directly. This eliminates circular coupling risks and reduces cyclomatic complexity.
+
