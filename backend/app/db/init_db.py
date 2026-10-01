@@ -27,17 +27,20 @@ async def init_db() -> None:
         # Safe idempotent column migrations for existing databases
         from sqlalchemy import text
         migration_statements = [
-            "ALTER TABLE exam_attempts ADD COLUMN violation_count INTEGER DEFAULT 0 NOT NULL",
-            "ALTER TABLE exam_attempts ADD COLUMN termination_reason VARCHAR(500)",
-            "ALTER TABLE exam_attempts ADD COLUMN terminated_at TIMESTAMPTZ",
-            "ALTER TABLE exam_attempts ADD COLUMN accepted_rules BOOLEAN DEFAULT TRUE NOT NULL",
-            "ALTER TABLE student_answers ADD COLUMN is_marked_for_review BOOLEAN DEFAULT FALSE NOT NULL",
+            "ALTER TYPE attemptstatus ADD VALUE IF NOT EXISTS 'NOT_STARTED'",
+            "ALTER TYPE attemptstatus ADD VALUE IF NOT EXISTS 'AUTO_SUBMITTED'",
+            "ALTER TYPE attemptstatus ADD VALUE IF NOT EXISTS 'TERMINATED_FOR_VIOLATION'",
+            "ALTER TABLE exam_attempts ADD COLUMN IF NOT EXISTS violation_count INTEGER DEFAULT 0 NOT NULL",
+            "ALTER TABLE exam_attempts ADD COLUMN IF NOT EXISTS termination_reason VARCHAR(500)",
+            "ALTER TABLE exam_attempts ADD COLUMN IF NOT EXISTS terminated_at TIMESTAMPTZ",
+            "ALTER TABLE exam_attempts ADD COLUMN IF NOT EXISTS accepted_rules BOOLEAN DEFAULT TRUE NOT NULL",
+            "ALTER TABLE student_answers ADD COLUMN IF NOT EXISTS is_marked_for_review BOOLEAN DEFAULT FALSE NOT NULL",
         ]
         for stmt in migration_statements:
             try:
                 await conn.execute(text(stmt))
             except Exception:
-                # Column already exists or dialect specific handling
+                # Column/type already exists or dialect specific handling
                 pass
     logger.info("Tables created and schema migrations checked successfully.")
 

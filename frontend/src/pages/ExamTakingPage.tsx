@@ -101,12 +101,22 @@ export const ExamTakingPage: React.FC = () => {
               setMarkedForReview(restoredMarked);
             }
 
-            // If already in progress, switch directly to active exam mode
-            setExamMode("ACTIVE_EXAM");
+            if (attempt.status === "TERMINATED_FOR_VIOLATION" || (attempt.violation_count ?? 0) >= 4) {
+              isTerminatedRef.current = true;
+              setIsTerminated(true);
+              setTerminationReason("Exam terminated due to exceeding the maximum number of allowed violations.");
+            } else {
+              // If already in progress, switch directly to active exam mode
+              setExamMode("ACTIVE_EXAM");
+            }
           }
         } catch (attemptErr: any) {
-          // If 400 with retakes prohibited, student has completed or was terminated
-          if (attemptErr.status === 400) {
+          // If 400/403 with retakes prohibited or terminated
+          if (attemptErr.message?.toLowerCase().includes("terminated")) {
+            isTerminatedRef.current = true;
+            setIsTerminated(true);
+            setTerminationReason("Exam terminated due to exceeding the maximum number of allowed violations.");
+          } else if (attemptErr.status === 400 || attemptErr.status === 403) {
             setError(attemptErr.message || "You cannot access this examination. Retakes are prohibited.");
           }
         }
@@ -120,6 +130,30 @@ export const ExamTakingPage: React.FC = () => {
     fetchExamInfo();
   }, [id]);
 
+  // Helper to check if browser is currently in fullscreen
+  const isFullscreenActive = () => {
+    return !!(
+      document.fullscreenElement ||
+      (document as any).webkitFullscreenElement ||
+      (document as any).mozFullScreenElement ||
+      (document as any).msFullscreenElement
+    );
+  };
+
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(true);
+
+  useEffect(() => {
+    const updateFsState = () => {
+      setIsFullscreen(isFullscreenActive());
+    };
+    document.addEventListener("fullscreenchange", updateFsState);
+    document.addEventListener("webkitfullscreenchange", updateFsState);
+    return () => {
+      document.removeEventListener("fullscreenchange", updateFsState);
+      document.removeEventListener("webkitfullscreenchange", updateFsState);
+    };
+  }, []);
+
   // Request Browser Fullscreen
   const requestFullScreen = async () => {
     try {
@@ -128,6 +162,8 @@ export const ExamTakingPage: React.FC = () => {
         await elem.requestFullscreen();
       } else if ((elem as any).webkitRequestFullscreen) {
         await (elem as any).webkitRequestFullscreen();
+      } else if ((elem as any).mozRequestFullScreen) {
+        await (elem as any).mozRequestFullScreen();
       } else if ((elem as any).msRequestFullscreen) {
         await (elem as any).msRequestFullscreen();
       }
@@ -150,13 +186,14 @@ export const ExamTakingPage: React.FC = () => {
   // Start Exam Handler from Instructions Page
   const handleStartExam = async () => {
     if (!id || !rulesAccepted) return;
+
+    // 1. Enter Fullscreen Mode directly from user gesture
+    await requestFullScreen();
+
     setLoading(true);
     setError(null);
 
     try {
-      // 1. Enter Fullscreen Mode
-      await requestFullScreen();
-
       // 2. Start / Initialize Authoritative Session
       const data = await api.startAttempt(parseInt(id, 10));
       setAttemptData(data);
@@ -182,31 +219,73 @@ export const ExamTakingPage: React.FC = () => {
     }
   };
 
-  // Trigger and report a proctored violation to server
-  const triggerViolation = useCallback(
-    async (eventType: "TAB_SWITCH" | "WINDOW_BLUR" | "FULLSCREEN_EXIT", details: string) => {
-      if (!attemptData || isSubmittedRef.current || isTerminatedRef.current || examMode !== "ACTIVE_EXAM") return;
+  // Centralized Violation Handler (A, B, C, D, E, F, G)
+  const isProcessingViolationRef = useRef(false);
+  const handleExamViolation = useCallback(
+    async (type: "TAB_SWITCH" | "FULLSCREEN_EXIT") => {
+      if (
+        !attemptData ||
+        isSubmittedRef.current ||
+        isTerminatedRef.current ||
+        examMode !== "ACTIVE_EXAM"
+      ) {
+        return;
+      }
 
-      // Throttle violation triggers to at least 2.5 seconds apart to avoid duplicate event cascades
+      if (isProcessingViolationRef.current) {
+        return;
+      }
+
+      // Throttle violation triggers to at least 1.2s apart to prevent duplicate event cascades
       const now = Date.now();
-      if (now - lastViolationTimeRef.current < 2500) {
+      if (now - lastViolationTimeRef.current < 1200) {
         return;
       }
       lastViolationTimeRef.current = now;
+      isProcessingViolationRef.current = true;
 
       try {
-        const res = await api.recordViolation(attemptData.attempt_id, eventType, details);
-        setCurrentWarning(res);
-        setWarningModalOpen(true);
+        const details =
+          type === "FULLSCREEN_EXIT"
+            ? "Candidate exited required full-screen mode."
+            : "Candidate switched away from examination tab.";
 
-        if (res.is_terminated) {
+        // Read server count, increment by 1, log audit event, return updated status
+        const res = await api.recordViolation(attemptData.attempt_id, type, details);
+
+        // Update local attempt data with authoritative violation count
+        setAttemptData((prev) =>
+          prev ? { ...prev, violation_count: res.violation_count } : null
+        );
+
+        if (res.is_terminated || res.violation_count >= 4) {
           isTerminatedRef.current = true;
           setIsTerminated(true);
-          setTerminationReason(res.termination_reason || res.message);
+          setTerminationReason(
+            res.termination_reason ||
+            res.message ||
+            "Exam terminated due to exceeding the maximum number of allowed violations."
+          );
+          setWarningModalOpen(false);
+          exitFullScreen();
+        } else {
+          setCurrentWarning(res);
+          setWarningModalOpen(true);
+        }
+      } catch (err: any) {
+        if (
+          err?.message?.toLowerCase().includes("terminated") ||
+          err?.status === 400 ||
+          err?.status === 403
+        ) {
+          isTerminatedRef.current = true;
+          setIsTerminated(true);
+          setTerminationReason("Exam terminated due to exceeding the maximum number of allowed violations.");
+          setWarningModalOpen(false);
           exitFullScreen();
         }
-      } catch {
-        // Log locally if network failure occurs during violation report
+      } finally {
+        isProcessingViolationRef.current = false;
       }
     },
     [attemptData, examMode]
@@ -216,29 +295,36 @@ export const ExamTakingPage: React.FC = () => {
   useEffect(() => {
     if (examMode !== "ACTIVE_EXAM" || isSubmittedRef.current || isTerminatedRef.current) return;
 
-    // 1. Visibility Change (Tab Switch)
+    // 1. Visibility Change (Tab Switch / Minimized)
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        triggerViolation("TAB_SWITCH", "Candidate switched away from examination tab.");
+      if (document.hidden || document.visibilityState === "hidden") {
+        handleExamViolation("TAB_SWITCH");
       }
     };
 
-    // 2. Window Blur (Focus Lost / Alt-Tab / Split Screen)
+    // 2. Window Blur (Focus Lost / Alt-Tab / App Switching)
     const handleWindowBlur = () => {
-      triggerViolation("WINDOW_BLUR", "Candidate left the examination window focus.");
+      handleExamViolation("TAB_SWITCH");
     };
 
-    // 3. Fullscreen Exit
+    // 3. Fullscreen Exit Detection (ESC key or browser exit)
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-        triggerViolation("FULLSCREEN_EXIT", "Candidate exited required full-screen mode.");
+      if (!isFullscreenActive()) {
+        handleExamViolation("FULLSCREEN_EXIT");
       }
     };
 
-    // 4. Page BeforeUnload (Closing window or reloading)
+    // 4. Keyboard ESC listener for immediate signal
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" || e.code === "Escape") {
+        handleExamViolation("FULLSCREEN_EXIT");
+      }
+    };
+
+    // 5. Page BeforeUnload (Closing window or reloading)
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
-      e.returnValue = "Leaving this page will log a severe security violation.";
+      e.returnValue = "Leaving this page will log an exam violation.";
       return e.returnValue;
     };
 
@@ -246,6 +332,7 @@ export const ExamTakingPage: React.FC = () => {
     window.addEventListener("blur", handleWindowBlur);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
@@ -253,9 +340,10 @@ export const ExamTakingPage: React.FC = () => {
       window.removeEventListener("blur", handleWindowBlur);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [examMode, triggerViolation]);
+  }, [examMode, handleExamViolation]);
 
   // Periodic Heartbeat Sync with Backend (Every 15 Seconds)
   useEffect(() => {
@@ -267,12 +355,15 @@ export const ExamTakingPage: React.FC = () => {
         if (statusData.is_terminated || statusData.status === "TERMINATED_FOR_VIOLATION") {
           isTerminatedRef.current = true;
           setIsTerminated(true);
-          setTerminationReason(statusData.termination_reason || "Exam terminated due to security policy violations.");
+          setTerminationReason("Exam terminated due to exceeding the maximum number of allowed violations.");
+          setWarningModalOpen(false);
           exitFullScreen();
         } else if (statusData.status === "AUTO_SUBMITTED" || statusData.remaining_seconds <= 0) {
           isSubmittedRef.current = true;
           exitFullScreen();
           navigate(`/student/results`);
+        } else if (statusData.violation_count !== undefined) {
+          setAttemptData((prev) => (prev ? { ...prev, violation_count: statusData.violation_count } : null));
         }
       } catch {
         // Network heartbeat retry handled quietly
@@ -431,15 +522,14 @@ export const ExamTakingPage: React.FC = () => {
             </span>
             <h2 className="text-2xl font-bold text-white">Examination Terminated</h2>
             <p className="text-sm text-slate-300 leading-relaxed max-w-md mx-auto">
-              Your examination session has been permanently terminated due to repeated anti-cheating policy violations
-              (tab-switch or full-screen exit thresholds exceeded).
+              Exam terminated due to exceeding the maximum number of allowed violations.
             </p>
           </div>
 
           <div className="bg-slate-800/80 border border-slate-700 p-4 rounded-2xl text-left text-xs space-y-2 text-slate-300">
             <div className="font-semibold text-rose-400 uppercase tracking-wider text-[10px]">Official Record:</div>
             <div>
-              <span className="text-slate-500">Reason:</span> {terminationReason || "Policy violation threshold exceeded."}
+              <span className="text-slate-500">Reason:</span> {terminationReason || "Exam terminated due to exceeding the maximum number of allowed violations."}
             </div>
             <div>
               <span className="text-slate-500">Attempt Status:</span>{" "}
@@ -690,9 +780,21 @@ export const ExamTakingPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right: Authoritative Timer & Submit */}
-        <div className="flex items-center space-x-3">
+        {/* Right: Authoritative Timer & Fullscreen & Submit */}
+        <div className="flex items-center space-x-2 sm:space-x-3">
           <TimerDisplay expiresAt={attemptData.expires_at} onExpire={handleTimerExpire} />
+
+          <button
+            onClick={requestFullScreen}
+            title={isFullscreen ? "Full-screen Active" : "Enter Full-screen"}
+            className={`p-2 rounded-xl border text-xs transition flex items-center space-x-1 ${
+              isFullscreen
+                ? "bg-slate-800 text-slate-400 border-slate-700 hover:text-white"
+                : "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 animate-pulse"
+            }`}
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
 
           <button
             onClick={() => setShowSubmitModal(true)}
@@ -703,6 +805,23 @@ export const ExamTakingPage: React.FC = () => {
           </button>
         </div>
       </header>
+
+      {/* Full-Screen Alert Banner if browser exits fullscreen */}
+      {!isFullscreen && (
+        <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 sm:px-8 py-2.5 flex items-center justify-between text-xs text-amber-300">
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <span>Full-screen mode is required for this examination.</span>
+          </div>
+          <button
+            onClick={requestFullScreen}
+            className="px-3.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg transition text-xs flex items-center space-x-1 shadow-sm"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+            <span>Re-Enter Full-Screen</span>
+          </button>
+        </div>
+      )}
 
       {/* Main Examination Grid */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -854,9 +973,9 @@ export const ExamTakingPage: React.FC = () => {
       {/* Warning Violation Modal (Warnings 1, 2, 3) */}
       <Modal
         isOpen={warningModalOpen && !isTerminated}
-        onClose={() => {
+        onClose={async () => {
           setWarningModalOpen(false);
-          requestFullScreen();
+          await requestFullScreen();
         }}
         title="Anti-Cheating Policy Warning"
       >
@@ -865,7 +984,7 @@ export const ExamTakingPage: React.FC = () => {
             <AlertTriangle className="w-6 h-6 flex-shrink-0 text-amber-600" />
             <div>
               <div className="font-bold text-sm">
-                Security Warning {currentWarning?.warning_level || 1} of 3
+                Security Warning {currentWarning?.warning_level || (attemptData?.violation_count ?? 1)} of 3
               </div>
               <div className="text-xs text-amber-700 mt-0.5">
                 {currentWarning?.message || "You left the examination window or exited full-screen."}
@@ -880,9 +999,9 @@ export const ExamTakingPage: React.FC = () => {
 
           <div className="pt-2 flex justify-end">
             <button
-              onClick={() => {
+              onClick={async () => {
                 setWarningModalOpen(false);
-                requestFullScreen();
+                await requestFullScreen();
               }}
               className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md"
             >

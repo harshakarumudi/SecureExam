@@ -85,7 +85,7 @@ class AttemptService:
             if existing_attempt.status == AttemptStatus.TERMINATED_FOR_VIOLATION:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Examination terminated due to security violations. Retakes are prohibited."
+                    detail="Exam terminated due to exceeding the maximum number of allowed violations. Retakes are prohibited."
                 )
             if existing_attempt.status == AttemptStatus.EXPIRED:
                 raise HTTPException(
@@ -300,10 +300,10 @@ class AttemptService:
         if attempt.status != AttemptStatus.IN_PROGRESS:
             return ExamViolationResponse(
                 violation_count=attempt.violation_count,
-                warning_level=attempt.violation_count,
-                message=f"Attempt is already {attempt.status.value}.",
+                warning_level=min(attempt.violation_count, 4),
+                message="Exam terminated due to exceeding the maximum number of allowed violations." if attempt.status == AttemptStatus.TERMINATED_FOR_VIOLATION else f"Attempt is already {attempt.status.value}.",
                 is_terminated=(attempt.status == AttemptStatus.TERMINATED_FOR_VIOLATION),
-                termination_reason=attempt.termination_reason,
+                termination_reason=attempt.termination_reason or "Maximum exam violations exceeded",
                 timestamp=datetime.now(UTC)
             )
 
@@ -326,12 +326,12 @@ class AttemptService:
         else:
             is_terminated = True
             warn_num = 4
-            term_reason = req.details or f"Exam terminated due to exceeding allowable security violations ({req.event_type})."
+            term_reason = "Maximum exam violations exceeded"
             attempt.status = AttemptStatus.TERMINATED_FOR_VIOLATION
             attempt.termination_reason = term_reason
             attempt.terminated_at = now
             attempt.submitted_at = now
-            msg = "Examination Terminated: Your exam has been terminated for exceeding the allowable security violations. Your current answers have been submitted."
+            msg = "Exam Terminated: Exam terminated due to exceeding the maximum number of allowed violations."
 
         # Record violation in audit log
         violation_log = ExamViolation(

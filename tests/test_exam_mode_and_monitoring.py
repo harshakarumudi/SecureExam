@@ -309,3 +309,152 @@ async def test_get_attempt_endpoint_authorization(
     s2_resp = await client.get(f"/api/v1/attempts/{attempt_id}", headers=student2_headers)
     assert s2_resp.status_code == 403
 
+
+@pytest.mark.asyncio
+async def test_exact_violation_scenarios_and_refresh(
+    client: AsyncClient,
+    faculty1_headers: dict[str, str],
+    student1_headers: dict[str, str]
+):
+    """
+    Rigorously tests:
+    TEST 1: Start exam -> Exit fullscreen (ESC) -> Warning 1
+    TEST 2: Return to fullscreen -> Exit fullscreen (ESC) again -> Warning 2
+    TEST 3: Exit fullscreen again -> Warning 3
+    TEST 4: Exit fullscreen a 4th time -> Exam TERMINATED
+    TEST 5: Switch tab after Warning 1 -> Warning 2
+    TEST 6: Switch tab after Warning 2 -> Warning 3
+    TEST 7: Switch tab after Warning 3 -> Exam TERMINATED
+    TEST 8: Reach Warning 2 -> Refresh page -> Switch tab -> Warning 3, NOT Warning 1
+    TEST 9: Reach Warning 3 -> Refresh page -> Switch tab -> Exam TERMINATED
+    TEST 10: After termination, refresh page -> Exam remains terminated and cannot resume
+    """
+    # Create Exam A for Fullscreen ESC escalation tests (TEST 1 - 4)
+    exam_a = await client.post("/api/v1/exams/", json={
+        "title": "ESC Escalation Test Exam",
+        "description": "ESC and Fullscreen tests",
+        "duration_minutes": 20,
+        "total_marks": 10.0,
+        "passing_marks": 5.0
+    }, headers=faculty1_headers)
+    exam_a_id = exam_a.json()["id"]
+    await client.put(f"/api/v1/exams/{exam_a_id}", json={"status": "PUBLISHED"}, headers=faculty1_headers)
+
+    # TEST 1: Start exam, Exit fullscreen using ESC -> Warning 1
+    start_a = await client.post(f"/api/v1/attempts/start/{exam_a_id}", headers=student1_headers)
+    assert start_a.status_code == 201
+    att_a_id = start_a.json()["attempt_id"]
+
+    v1_esc = await client.post(f"/api/v1/attempts/{att_a_id}/violation", json={
+        "event_type": "FULLSCREEN_EXIT",
+        "details": "Candidate exited required full-screen mode."
+    }, headers=student1_headers)
+    assert v1_esc.status_code == 200
+    v1_esc_data = v1_esc.json()
+    assert v1_esc_data["violation_count"] == 1
+    assert v1_esc_data["warning_level"] == 1
+    assert v1_esc_data["is_terminated"] is False
+
+    # TEST 2: Return to fullscreen, Exit fullscreen using ESC again -> Warning 2
+    v2_esc = await client.post(f"/api/v1/attempts/{att_a_id}/violation", json={
+        "event_type": "FULLSCREEN_EXIT",
+        "details": "Candidate exited required full-screen mode."
+    }, headers=student1_headers)
+    assert v2_esc.status_code == 200
+    v2_esc_data = v2_esc.json()
+    assert v2_esc_data["violation_count"] == 2
+    assert v2_esc_data["warning_level"] == 2
+    assert v2_esc_data["is_terminated"] is False
+
+    # TEST 3: Exit fullscreen again -> Warning 3
+    v3_esc = await client.post(f"/api/v1/attempts/{att_a_id}/violation", json={
+        "event_type": "FULLSCREEN_EXIT",
+        "details": "Candidate exited required full-screen mode."
+    }, headers=student1_headers)
+    assert v3_esc.status_code == 200
+    v3_esc_data = v3_esc.json()
+    assert v3_esc_data["violation_count"] == 3
+    assert v3_esc_data["warning_level"] == 3
+    assert v3_esc_data["is_terminated"] is False
+
+    # TEST 4: Exit fullscreen a fourth time -> Exam TERMINATED
+    v4_esc = await client.post(f"/api/v1/attempts/{att_a_id}/violation", json={
+        "event_type": "FULLSCREEN_EXIT",
+        "details": "Candidate exited required full-screen mode."
+    }, headers=student1_headers)
+    assert v4_esc.status_code == 200
+    v4_esc_data = v4_esc.json()
+    assert v4_esc_data["violation_count"] == 4
+    assert v4_esc_data["is_terminated"] is True
+    assert "terminated" in v4_esc_data["message"].lower()
+
+    # TEST 10: After termination, refresh page -> Exam remains terminated and cannot resume
+    refresh_after_term = await client.post(f"/api/v1/attempts/start/{exam_a_id}", headers=student1_headers)
+    assert refresh_after_term.status_code == 400
+    assert "terminated" in refresh_after_term.json()["detail"].lower()
+
+    # Create Exam B for Tab Switch & Refresh tests (TEST 5 - 9)
+    exam_b = await client.post("/api/v1/exams/", json={
+        "title": "Tab Switch and Refresh Test Exam",
+        "description": "Tab switch escalation and refresh tests",
+        "duration_minutes": 20,
+        "total_marks": 10.0,
+        "passing_marks": 5.0
+    }, headers=faculty1_headers)
+    exam_b_id = exam_b.json()["id"]
+    await client.put(f"/api/v1/exams/{exam_b_id}", json={"status": "PUBLISHED"}, headers=faculty1_headers)
+
+    start_b = await client.post(f"/api/v1/attempts/start/{exam_b_id}", headers=student1_headers)
+    assert start_b.status_code == 201
+    att_b_id = start_b.json()["attempt_id"]
+
+    # Initial violation 1: Tab switch -> Warning 1
+    v1_tab = await client.post(f"/api/v1/attempts/{att_b_id}/violation", json={
+        "event_type": "TAB_SWITCH",
+        "details": "Candidate switched away from examination tab."
+    }, headers=student1_headers)
+    assert v1_tab.json()["violation_count"] == 1
+
+    # TEST 5: Switch tab after Warning 1 -> Warning 2
+    v2_tab = await client.post(f"/api/v1/attempts/{att_b_id}/violation", json={
+        "event_type": "TAB_SWITCH",
+        "details": "Candidate switched away from examination tab."
+    }, headers=student1_headers)
+    assert v2_tab.json()["violation_count"] == 2
+    assert v2_tab.json()["warning_level"] == 2
+    assert v2_tab.json()["is_terminated"] is False
+
+    # TEST 8: Reach Warning 2, Refresh page, Switch tab -> Warning 3, NOT Warning 1
+    refresh_at_w2 = await client.post(f"/api/v1/attempts/start/{exam_b_id}", headers=student1_headers)
+    assert refresh_at_w2.status_code in [200, 201]
+    assert refresh_at_w2.json()["violation_count"] == 2  # Count must NEVER reset to zero
+
+    # TEST 6 & TEST 8 continuation: Switch tab -> Warning 3, NOT Warning 1
+    v3_tab = await client.post(f"/api/v1/attempts/{att_b_id}/violation", json={
+        "event_type": "TAB_SWITCH",
+        "details": "Candidate switched away from examination tab."
+    }, headers=student1_headers)
+    assert v3_tab.json()["violation_count"] == 3
+    assert v3_tab.json()["warning_level"] == 3
+    assert v3_tab.json()["is_terminated"] is False
+
+    # TEST 9: Reach Warning 3, Refresh page, Switch tab -> Exam TERMINATED
+    refresh_at_w3 = await client.post(f"/api/v1/attempts/start/{exam_b_id}", headers=student1_headers)
+    assert refresh_at_w3.status_code in [200, 201]
+    assert refresh_at_w3.json()["violation_count"] == 3  # Count preserved
+
+    # TEST 7 & TEST 9 continuation: Switch tab -> Exam TERMINATED
+    v4_tab = await client.post(f"/api/v1/attempts/{att_b_id}/violation", json={
+        "event_type": "TAB_SWITCH",
+        "details": "Candidate switched away from examination tab."
+    }, headers=student1_headers)
+    assert v4_tab.json()["violation_count"] == 4
+    assert v4_tab.json()["is_terminated"] is True
+    assert "terminated" in v4_tab.json()["message"].lower()
+
+    # Verify attempt status endpoint reflects terminal state
+    stat_b = await client.get(f"/api/v1/attempts/{att_b_id}/status", headers=student1_headers)
+    assert stat_b.json()["status"] == "TERMINATED_FOR_VIOLATION"
+    assert stat_b.json()["is_terminated"] is True
+
+
