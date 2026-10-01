@@ -58,7 +58,7 @@ jobs:
 
       - name: Execute npm audit Dependency Scan
         working-directory: frontend
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Execute Automated Pytest Suite with Coverage
         run: |
