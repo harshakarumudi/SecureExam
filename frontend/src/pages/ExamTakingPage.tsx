@@ -35,6 +35,8 @@ export const ExamTakingPage: React.FC = () => {
   const [examMode, setExamMode] = useState<"INSTRUCTIONS" | "ACTIVE_EXAM">("INSTRUCTIONS");
   const [examMeta, setExamMeta] = useState<Exam | null>(null);
   const [rulesAccepted, setRulesAccepted] = useState<boolean>(false);
+  const [examStarted, setExamStarted] = useState<boolean>(false);
+  const [isProctoringActive, setIsProctoringActive] = useState<boolean>(false);
 
   // Active attempt state
   const [attemptData, setAttemptData] = useState<AttemptStartResponse | null>(null);
@@ -80,9 +82,9 @@ export const ExamTakingPage: React.FC = () => {
         const meta = await api.getExam(examIdNum);
         setExamMeta(meta);
 
-        // Attempt silent start or resume (if the student refreshed the page during an active attempt)
+        // Check if an attempt already exists (e.g. candidate refreshed page during active attempt)
         try {
-          const attempt = await api.startAttempt(examIdNum);
+          const attempt = await api.getActiveAttempt(examIdNum);
           if (attempt && attempt.questions && attempt.questions.length > 0) {
             // Restore attempt data
             setAttemptData(attempt);
@@ -105,9 +107,15 @@ export const ExamTakingPage: React.FC = () => {
               isTerminatedRef.current = true;
               setIsTerminated(true);
               setTerminationReason("Exam terminated due to exceeding the maximum number of allowed violations.");
-            } else {
-              // If already in progress, switch directly to active exam mode
+            } else if (attempt.status === "SUBMITTED" || attempt.status === "AUTO_SUBMITTED") {
+              setError("You have already completed and submitted this examination. Retakes are prohibited.");
+            } else if (attempt.status === "IN_PROGRESS") {
+              // Resuming active exam
               setExamMode("ACTIVE_EXAM");
+              setExamStarted(true);
+              setTimeout(() => {
+                setIsProctoringActive(true);
+              }, 1500);
             }
           }
         } catch (attemptErr: any) {
@@ -187,14 +195,29 @@ export const ExamTakingPage: React.FC = () => {
   const handleStartExam = async () => {
     if (!id || !rulesAccepted) return;
 
-    // 1. Enter Fullscreen Mode directly from user gesture
-    await requestFullScreen();
+    // Direct Fullscreen Request from user click gesture (Safe, non-blocking)
+    try {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch((err) => {
+          console.warn("Fullscreen request was denied:", err);
+        });
+      } else if ((elem as any).webkitRequestFullscreen) {
+        (elem as any).webkitRequestFullscreen();
+      } else if ((elem as any).mozRequestFullScreen) {
+        (elem as any).mozRequestFullScreen();
+      } else if ((elem as any).msRequestFullscreen) {
+        (elem as any).msRequestFullscreen();
+      }
+    } catch (error) {
+      console.warn("Fullscreen request was denied:", error);
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      // 2. Start / Initialize Authoritative Session
+      // 1. Create/start authoritative session
       const data = await api.startAttempt(parseInt(id, 10));
       setAttemptData(data);
 
@@ -211,7 +234,26 @@ export const ExamTakingPage: React.FC = () => {
         setMarkedForReview(restoredMarked);
       }
 
+      // 2. Navigate & render the exam environment
       setExamMode("ACTIVE_EXAM");
+      setExamStarted(true);
+
+      // 3. Retry fullscreen safely if not already active
+      try {
+        if (!isFullscreenActive() && document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch((err) => {
+            console.warn("Fullscreen retry was denied:", err);
+          });
+        }
+      } catch (error) {
+        console.warn("Fullscreen retry was denied:", error);
+      }
+
+      // 4. Attach/enable proctoring violation listeners ONLY AFTER startup transition completes
+      setTimeout(() => {
+        setIsProctoringActive(true);
+      }, 1500);
+
     } catch (err: any) {
       setError(err.message || "Unable to start examination session.");
     } finally {
@@ -225,6 +267,8 @@ export const ExamTakingPage: React.FC = () => {
     async (type: "TAB_SWITCH" | "FULLSCREEN_EXIT") => {
       if (
         !attemptData ||
+        !examStarted ||
+        !isProctoringActive ||
         isSubmittedRef.current ||
         isTerminatedRef.current ||
         examMode !== "ACTIVE_EXAM"
@@ -288,12 +332,20 @@ export const ExamTakingPage: React.FC = () => {
         isProcessingViolationRef.current = false;
       }
     },
-    [attemptData, examMode]
+    [attemptData, examStarted, isProctoringActive, examMode]
   );
 
   // Monitoring Listeners: Visibility, Focus/Blur, and Fullscreen Change
   useEffect(() => {
-    if (examMode !== "ACTIVE_EXAM" || isSubmittedRef.current || isTerminatedRef.current) return;
+    if (
+      examMode !== "ACTIVE_EXAM" ||
+      !examStarted ||
+      !isProctoringActive ||
+      isSubmittedRef.current ||
+      isTerminatedRef.current
+    ) {
+      return;
+    }
 
     // 1. Visibility Change (Tab Switch / Minimized)
     const handleVisibilityChange = () => {
@@ -343,11 +395,19 @@ export const ExamTakingPage: React.FC = () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [examMode, handleExamViolation]);
+  }, [examMode, examStarted, isProctoringActive, handleExamViolation]);
 
   // Periodic Heartbeat Sync with Backend (Every 15 Seconds)
   useEffect(() => {
-    if (examMode !== "ACTIVE_EXAM" || !attemptData || isSubmittedRef.current || isTerminatedRef.current) return;
+    if (
+      examMode !== "ACTIVE_EXAM" ||
+      !examStarted ||
+      !attemptData ||
+      isSubmittedRef.current ||
+      isTerminatedRef.current
+    ) {
+      return;
+    }
 
     const intervalId = setInterval(async () => {
       try {
@@ -554,7 +614,7 @@ export const ExamTakingPage: React.FC = () => {
   // ==========================================
   // VIEW 4: EXAM INSTRUCTIONS PAGE
   // ==========================================
-  if (examMode === "INSTRUCTIONS") {
+  if (examMode === "INSTRUCTIONS" || !examStarted || !attemptData) {
     const meta = examMeta;
     return (
       <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-8">

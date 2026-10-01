@@ -206,6 +206,74 @@ class AttemptService:
         )
 
     @staticmethod
+    async def get_active_attempt(
+        db: AsyncSession,
+        exam_id: int,
+        student: User
+    ) -> AttemptStartResponse | None:
+        # Check for existing attempt
+        result = await db.execute(
+            select(ExamAttempt)
+            .options(selectinload(ExamAttempt.answers))
+            .where(
+                ExamAttempt.exam_id == exam_id,
+                ExamAttempt.student_id == student.id
+            )
+        )
+        existing_attempt = result.scalars().first()
+        if not existing_attempt:
+            return None
+
+        # Fetch exam
+        exam_res = await db.execute(
+            select(Exam)
+            .options(selectinload(Exam.questions).selectinload(Question.options))
+            .where(Exam.id == exam_id)
+        )
+        exam = exam_res.scalars().first()
+        if not exam:
+            return None
+
+        now = datetime.now(UTC)
+        exp_at = existing_attempt.expires_at.replace(tzinfo=UTC) if existing_attempt.expires_at.tzinfo is None else existing_attempt.expires_at
+        rem_secs = max(0, int((exp_at - now).total_seconds()))
+
+        # Check if in-progress attempt has expired
+        if existing_attempt.status == AttemptStatus.IN_PROGRESS and rem_secs == 0:
+            grace_period = timedelta(seconds=15)
+            if now > (exp_at + grace_period):
+                existing_attempt.status = AttemptStatus.AUTO_SUBMITTED
+                existing_attempt.termination_reason = "Auto-submitted upon timer expiration."
+                existing_attempt.submitted_at = exp_at
+                await db.commit()
+
+        candidate_qs = AttemptService._build_candidate_questions(exam.questions)
+        saved_answers = [
+            SavedAnswerItem(
+                question_id=ans.question_id,
+                selected_option_id=ans.selected_option_id,
+                is_marked_for_review=ans.is_marked_for_review
+            )
+            for ans in existing_attempt.answers
+        ]
+
+        return AttemptStartResponse(
+            attempt_id=existing_attempt.id,
+            exam_id=exam.id,
+            exam_title=exam.title,
+            duration_minutes=exam.duration_minutes,
+            total_marks=exam.total_marks,
+            enable_negative_marking=exam.enable_negative_marking,
+            started_at=existing_attempt.started_at,
+            expires_at=existing_attempt.expires_at,
+            remaining_seconds=rem_secs,
+            violation_count=existing_attempt.violation_count,
+            status=existing_attempt.status,
+            questions=candidate_qs,
+            saved_answers=saved_answers
+        )
+
+    @staticmethod
     async def save_answer(
         db: AsyncSession,
         attempt_id: int,

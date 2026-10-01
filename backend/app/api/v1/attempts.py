@@ -21,6 +21,15 @@ from backend.app.services.evaluation_service import EvaluationService
 router = APIRouter(prefix="/attempts", tags=["Exam Attempts"])
 
 
+@router.get("/active/{exam_id}", response_model=AttemptStartResponse | None)
+async def get_active_exam_attempt(
+    exam_id: int,
+    current_user: User = Depends(require_role(UserRole.STUDENT)),
+    db: AsyncSession = Depends(get_db)
+):
+    return await AttemptService.get_active_attempt(db, exam_id=exam_id, student=current_user)
+
+
 @router.post("/start/{exam_id}", response_model=AttemptStartResponse, status_code=status.HTTP_201_CREATED)
 async def start_exam_attempt(
     exam_id: int,

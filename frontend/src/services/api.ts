@@ -142,6 +142,9 @@ export const api = {
   getStudents: () => request<User[]>("/users/students"),
 
   // Attempts
+  getActiveAttempt: (examId: number) =>
+    request<AttemptStartResponse | null>(`/attempts/active/${examId}`),
+
   startAttempt: (examId: number) =>
     request<AttemptStartResponse>(`/attempts/start/${examId}`, {
       method: "POST",
