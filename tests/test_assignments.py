@@ -51,6 +51,11 @@ async def test_exam_assignment_flow_and_rbac(client, faculty1_headers, faculty2_
     assert len(assignments) == 1
     assert assignments[0]["student_id"] == student1_obj["id"]
 
+    # Verify Faculty 1 can fetch assignments
+    get_assign_resp = await client.get(f"/api/v1/exams/{exam_id}/assignments", headers=faculty1_headers)
+    assert get_assign_resp.status_code == 200
+    assert len(get_assign_resp.json()) == 1
+
     # 4. Student 1 checks available exams: MUST see the restricted exam
     s1_exams_resp = await client.get("/api/v1/exams/available", headers=student1_headers)
     assert s1_exams_resp.status_code == 200

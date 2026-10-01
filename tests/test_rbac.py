@@ -86,4 +86,58 @@ async def test_admin_access_allowed(client, admin_headers):
 
     users_resp = await client.get("/api/v1/users/", headers=admin_headers)
     assert users_resp.status_code == 200
-    assert len(users_resp.json()) >= 5
+    users = users_resp.json()
+    assert len(users) >= 5
+
+    # Test Admin updating user role
+    target_user = users[-1]
+    role_resp = await client.put(
+        f"/api/v1/users/{target_user['id']}/role",
+        json={"role": "FACULTY"},
+        headers=admin_headers
+    )
+    assert role_resp.status_code == 200
+    assert role_resp.json()["role"] == "FACULTY"
+
+    # Test Admin toggling user status
+    status_resp = await client.put(
+        f"/api/v1/users/{target_user['id']}/status",
+        json={"is_active": False},
+        headers=admin_headers
+    )
+    assert status_resp.status_code == 200
+    assert status_resp.json()["is_active"] is False
+
+
+@pytest.mark.asyncio
+async def test_exam_and_question_deletion(client, faculty1_headers):
+    # 1. Create exam
+    create_resp = await client.post(
+        "/api/v1/exams/",
+        json={"title": "To Be Deleted Exam", "duration_minutes": 15, "total_marks": 10.0, "passing_marks": 5.0},
+        headers=faculty1_headers
+    )
+    assert create_resp.status_code == 201
+    exam_id = create_resp.json()["id"]
+
+    # 2. Add question
+    q_resp = await client.post(
+        f"/api/v1/exams/{exam_id}/questions",
+        json={
+            "question_text": "Sample Question",
+            "marks": 10.0,
+            "options": [{"option_text": "A", "is_correct": True}, {"option_text": "B", "is_correct": False}]
+        },
+        headers=faculty1_headers
+    )
+    assert q_resp.status_code == 201
+    q_id = q_resp.json()["id"]
+
+    # 3. Delete question
+    del_q_resp = await client.delete(f"/api/v1/exams/questions/{q_id}", headers=faculty1_headers)
+    assert del_q_resp.status_code == 204
+
+    # 4. Delete exam
+    del_exam_resp = await client.delete(f"/api/v1/exams/{exam_id}", headers=faculty1_headers)
+    assert del_exam_resp.status_code == 204
+

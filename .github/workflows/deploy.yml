@@ -1,0 +1,164 @@
+name: SecureExam Container Deployment (CD)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target deployment environment"
+        required: true
+        default: "production"
+
+permissions:
+  contents: read
+  packages: write
+  deployments: write
+
+jobs:
+  validate-and-test:
+    name: DevSecOps Verification & Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Ruff AST Linter
+        run: pip install ruff
+
+      - name: Run Ruff AST Code Linting
+        run: ruff check backend/ tests/
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Validate Frontend TypeScript Build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install Backend Dependencies & pip-audit
+        run: |
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pip-audit
+
+      - name: Execute pip-audit Dependency Scan
+        run: pip-audit
+
+      - name: Execute npm audit Dependency Scan
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+      - name: Execute Automated Pytest Suite with Coverage
+        run: |
+          export PYTHONPATH=$PWD
+          pytest tests/ -v --cov=backend.app --cov-report=xml:coverage.xml
+
+      - name: Enforce Coverage Threshold (>= 65%)
+        run: |
+          python -c "import xml.etree.ElementTree as ET; tree=ET.parse('coverage.xml'); rate=float(tree.getroot().attrib['line-rate'])*100; print(f'Measured Coverage: {rate:.1f}%'); assert rate >= 65.0, f'Coverage {rate:.1f}% below threshold'"
+
+  publish-containers:
+    name: Build & Publish Containers to GHCR
+    runs-on: ubuntu-latest
+    needs: [validate-and-test]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine Lowercase Repository Slug
+        run: |
+          echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      - name: Build & Push Backend Container Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ env.REPO_LOWER }}/backend:latest
+            ghcr.io/${{ env.REPO_LOWER }}/backend:${{ github.sha }}
+
+      - name: Build & Push Frontend Container Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ env.REPO_LOWER }}/frontend:latest
+            ghcr.io/${{ env.REPO_LOWER }}/frontend:${{ github.sha }}
+
+  deploy-and-verify:
+    name: Containerized Deployment & Health Verification
+    runs-on: ubuntu-latest
+    needs: [publish-containers]
+    environment:
+      name: production
+      url: http://localhost:3000
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy Containers with Docker Compose
+        run: |
+          docker compose up -d --build
+          echo "Deployment initiated via docker compose."
+
+      - name: Verify Live Health Probes
+        run: |
+          echo "Checking container deployment health..."
+          for i in {1..20}; do
+            echo "Health probe attempt $i/20..."
+            BACKEND_RESP=$(curl -s http://localhost:8000/api/v1/health || true)
+            FRONTEND_RESP=$(curl -s http://localhost:3000/healthz || true)
+            
+            if [[ "$BACKEND_RESP" == *"healthy"* ]] && [[ "$FRONTEND_RESP" == *"healthy"* ]]; then
+              echo "Deployment health verified successfully!"
+              echo "Backend status: $BACKEND_RESP"
+              echo "Frontend status: $FRONTEND_RESP"
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "Deployment health probe failed!"
+          docker compose ps
+          docker compose logs
+          exit 1
+
+      - name: Deployment Success Telemetry
+        run: |
+          echo "============================================================"
+          echo " SecureExam Production Deployment Successfully Verified!    "
+          echo "============================================================"
+          docker compose ps
