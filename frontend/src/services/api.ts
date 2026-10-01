@@ -147,6 +147,43 @@ export const api = {
       method: "POST",
     }),
 
+  saveAnswer: (
+    attemptId: number,
+    questionId: number,
+    selectedOptionId: number | null,
+    isMarkedForReview: boolean = false
+  ) =>
+    request<import("../types").AnswerAutoSaveResponse>(`/attempts/${attemptId}/save-answer`, {
+      method: "POST",
+      body: JSON.stringify({
+        question_id: questionId,
+        selected_option_id: selectedOptionId,
+        is_marked_for_review: isMarkedForReview,
+      }),
+    }),
+
+  recordViolation: (
+    attemptId: number,
+    eventType: string,
+    details?: string
+  ) =>
+    request<import("../types").ExamViolationResponse>(`/attempts/${attemptId}/violation`, {
+      method: "POST",
+      body: JSON.stringify({
+        event_type: eventType,
+        details,
+      }),
+    }),
+
+  getAttemptStatus: (attemptId: number) =>
+    request<import("../types").AttemptStatusResponse>(`/attempts/${attemptId}/status`),
+
+  getAttemptViolations: (attemptId: number) =>
+    request<import("../types").ExamViolationItem[]>(`/attempts/${attemptId}/violations`),
+
+  getExamAttempts: (examId: number) =>
+    request<import("../types").ExamAttemptMonitor[]>(`/exams/${examId}/attempts`),
+
   submitAttempt: (attemptId: number, answers: StudentAnswerSubmission[]) =>
     request<Result>(`/attempts/${attemptId}/submit`, {
       method: "POST",

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Exam, Result, User } from "../types";
+import { Exam, ExamAttemptMonitor, ExamViolationItem, Result, User } from "../types";
 import { api } from "../services/api";
 import { Modal } from "../components/Modal";
 import {
@@ -10,6 +10,7 @@ import {
   Users,
   AlertCircle,
   UserCheck,
+  ShieldAlert,
 } from "lucide-react";
 
 export const FacultyDashboard: React.FC = () => {
@@ -23,10 +24,19 @@ export const FacultyDashboard: React.FC = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showAttemptsModal, setShowAttemptsModal] = useState(false);
+  const [showActivityLogModal, setShowActivityLogModal] = useState(false);
 
   // Active selected exam
   const [activeExam, setActiveExam] = useState<Exam | null>(null);
   const [submissions, setSubmissions] = useState<Result[]>([]);
+
+  // Attempts & Proctoring Monitor State
+  const [attemptsList, setAttemptsList] = useState<ExamAttemptMonitor[]>([]);
+  const [attemptsLoading, setAttemptsLoading] = useState(false);
+  const [selectedAttemptViolations, setSelectedAttemptViolations] = useState<ExamViolationItem[]>([]);
+  const [selectedAttemptInfo, setSelectedAttemptInfo] = useState<ExamAttemptMonitor | null>(null);
+  const [activityLoading, setActivityLoading] = useState(false);
 
   // Student Assignment State
   const [students, setStudents] = useState<User[]>([]);
@@ -152,6 +162,34 @@ export const FacultyDashboard: React.FC = () => {
       alert(err.message || "Failed to load student assignments.");
     } finally {
       setAssignLoading(false);
+    }
+  };
+
+  const openAttemptsMonitor = async (exam: Exam) => {
+    try {
+      setActiveExam(exam);
+      setAttemptsLoading(true);
+      setShowAttemptsModal(true);
+      const data = await api.getExamAttempts(exam.id);
+      setAttemptsList(data);
+    } catch (err: any) {
+      alert(err.message || "Failed to load examination attempts.");
+    } finally {
+      setAttemptsLoading(false);
+    }
+  };
+
+  const openActivityLog = async (attempt: ExamAttemptMonitor) => {
+    try {
+      setSelectedAttemptInfo(attempt);
+      setActivityLoading(true);
+      setShowActivityLogModal(true);
+      const data = await api.getAttemptViolations(attempt.id);
+      setSelectedAttemptViolations(data);
+    } catch (err: any) {
+      alert(err.message || "Failed to load attempt violations.");
+    } finally {
+      setActivityLoading(false);
     }
   };
 
@@ -313,6 +351,13 @@ export const FacultyDashboard: React.FC = () => {
                       className="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition"
                     >
                       <Users className="w-4 h-4 inline" /> Submissions
+                    </button>
+                    <button
+                      onClick={() => openAttemptsMonitor(exam)}
+                      title="Attempts & Proctoring Violations"
+                      className="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                    >
+                      <ShieldAlert className="w-4 h-4 inline" /> Proctoring
                     </button>
                     <button
                       onClick={() => openAssignModal(exam)}
@@ -799,7 +844,183 @@ export const FacultyDashboard: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* Proctoring & Attempts Monitor Modal */}
+      {showAttemptsModal && activeExam && (
+        <Modal
+          isOpen={showAttemptsModal}
+          onClose={() => setShowAttemptsModal(false)}
+          title={`Proctoring & Attempts Monitor — ${activeExam.title}`}
+        >
+          <div className="space-y-4 max-w-4xl w-full">
+            <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <div>
+                <strong>Authoritative Monitor:</strong> Live attempt statuses and anti-cheating violations tracked on the server.
+              </div>
+              <div className="font-semibold text-slate-700">
+                Total Attempts: {attemptsList.length}
+              </div>
+            </div>
+
+            {attemptsLoading ? (
+              <div className="text-center py-12 text-slate-400">Loading student attempts...</div>
+            ) : attemptsList.length === 0 ? (
+              <div className="text-center py-12 text-slate-400">No attempts recorded for this examination yet.</div>
+            ) : (
+              <div className="max-h-96 overflow-y-auto border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
+                      <th className="py-3 px-4">Student</th>
+                      <th className="py-3 px-4">Attempt ID</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Score</th>
+                      <th className="py-3 px-4">Violations</th>
+                      <th className="py-3 px-4">Activity Log</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {attemptsList.map((att) => {
+                      let badgeColor = "bg-slate-100 text-slate-700";
+                      if (att.status === "SUBMITTED") badgeColor = "bg-emerald-100 text-emerald-800";
+                      if (att.status === "AUTO_SUBMITTED") badgeColor = "bg-blue-100 text-blue-800";
+                      if (att.status === "IN_PROGRESS") badgeColor = "bg-amber-100 text-amber-800";
+                      if (att.status === "TERMINATED_FOR_VIOLATION") badgeColor = "bg-rose-100 text-rose-800 font-bold";
+                      if (att.status === "EXPIRED") badgeColor = "bg-gray-100 text-gray-700";
+
+                      return (
+                        <tr key={att.id} className="hover:bg-slate-50/70 transition">
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-slate-900">{att.student_name}</div>
+                            <div className="text-[11px] text-slate-400">{att.student_email}</div>
+                          </td>
+                          <td className="py-3 px-4 font-mono font-medium text-slate-600">#{att.id}</td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${badgeColor}`}>
+                              {att.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-slate-800">
+                            {att.score !== null && att.score !== undefined
+                              ? `${att.score} / ${att.max_score} (${att.percentage?.toFixed(1)}%)`
+                              : "—"}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-0.5 rounded-md font-bold text-xs ${
+                                att.violation_count > 0 ? "bg-rose-100 text-rose-700" : "bg-slate-100 text-slate-500"
+                              }`}
+                            >
+                              {att.violation_count} {att.violation_count === 1 ? "alert" : "alerts"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <button
+                              onClick={() => openActivityLog(att)}
+                              className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg text-[11px] transition"
+                            >
+                              View Logs
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setShowAttemptsModal(false)}
+                className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Attempt Activity & Violation Log Stream Modal */}
+      {showActivityLogModal && selectedAttemptInfo && (
+        <Modal
+          isOpen={showActivityLogModal}
+          onClose={() => setShowActivityLogModal(false)}
+          title={`Security & Violation Audit: ${selectedAttemptInfo.student_name}`}
+        >
+          <div className="space-y-4 max-w-2xl w-full">
+            <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs space-y-1 text-slate-600">
+              <div className="flex justify-between">
+                <span>Attempt ID: <strong>#{selectedAttemptInfo.id}</strong></span>
+                <span>Violations Recorded: <strong className="text-rose-600">{selectedAttemptInfo.violation_count}</strong></span>
+              </div>
+              <div className="flex justify-between">
+                <span>Current Status: <strong className="text-slate-800">{selectedAttemptInfo.status}</strong></span>
+                {selectedAttemptInfo.termination_reason && (
+                  <span className="text-rose-600 font-medium truncate max-w-xs">{selectedAttemptInfo.termination_reason}</span>
+                )}
+              </div>
+            </div>
+
+            {activityLoading ? (
+              <div className="text-center py-8 text-slate-400">Loading activity stream...</div>
+            ) : selectedAttemptViolations.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">No security violations recorded for this attempt.</div>
+            ) : (
+              <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                {selectedAttemptViolations.map((v) => {
+                  let alertBadge = "bg-slate-100 text-slate-700 border-slate-200";
+                  if (v.event_type.includes("TERMINATED")) {
+                    alertBadge = "bg-rose-50 text-rose-800 border-rose-200 font-bold";
+                  } else if (v.event_type.includes("SWITCH") || v.event_type.includes("BLUR") || v.event_type.includes("FULLSCREEN")) {
+                    alertBadge = "bg-amber-50 text-amber-800 border-amber-200";
+                  } else if (v.event_type.includes("STARTED")) {
+                    alertBadge = "bg-emerald-50 text-emerald-800 border-emerald-200";
+                  }
+
+                  const timeStr = new Date(v.timestamp).toLocaleTimeString();
+
+                  return (
+                    <div
+                      key={v.id}
+                      className={`p-3 rounded-xl border text-xs flex items-start justify-between space-x-3 ${alertBadge}`}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-mono font-bold">{v.event_type}</span>
+                          {v.warning_number && v.warning_number > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.5 bg-white/70 rounded border font-semibold">
+                              Warning #{v.warning_number}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-600 leading-relaxed">{v.details || "Telemetry logged."}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0 text-[10px] text-slate-400 font-mono">
+                        <div>{timeStr}</div>
+                        {v.ip_address && <div>IP: {v.ip_address}</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setShowActivityLogModal(false)}
+                className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+              >
+                Close Audit
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
+
+export default FacultyDashboard;
 

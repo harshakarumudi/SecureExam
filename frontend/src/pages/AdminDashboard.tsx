@@ -205,11 +205,14 @@ export const AdminDashboard: React.FC = () => {
                 className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
               >
                 <option value="">All Security Events</option>
+                <option value="WARNING_ISSUED">WARNING_ISSUED (Proctoring)</option>
+                <option value="EXAM_TERMINATED">EXAM_TERMINATED (Violations)</option>
+                <option value="EXAM_STARTED">EXAM_STARTED</option>
+                <option value="ATTEMPT_SUBMITTED">ATTEMPT_SUBMITTED</option>
+                <option value="ATTEMPT_AUTO_SUBMITTED">ATTEMPT_AUTO_SUBMITTED</option>
                 <option value="LOGIN_SUCCESS">LOGIN_SUCCESS</option>
                 <option value="LOGIN_FAILED">LOGIN_FAILED</option>
                 <option value="EXAM_CREATED">EXAM_CREATED</option>
-                <option value="ATTEMPT_STARTED">ATTEMPT_STARTED</option>
-                <option value="ATTEMPT_SUBMITTED">ATTEMPT_SUBMITTED</option>
                 <option value="ROLE_CHANGED">ROLE_CHANGED</option>
                 <option value="UNAUTHORIZED_ACCESS_ATTEMPT">UNAUTHORIZED_ACCESS_ATTEMPT</option>
               </select>

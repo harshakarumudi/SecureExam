@@ -29,7 +29,10 @@ class EvaluationService:
         # 1. Fetch attempt and exam
         result = await db.execute(
             select(ExamAttempt)
-            .options(selectinload(ExamAttempt.exam).selectinload(Exam.questions).selectinload(Question.options))
+            .options(
+                selectinload(ExamAttempt.exam).selectinload(Exam.questions).selectinload(Question.options),
+                selectinload(ExamAttempt.answers)
+            )
             .where(ExamAttempt.id == attempt_id)
         )
         attempt = result.scalars().first()
@@ -50,15 +53,17 @@ class EvaluationService:
             )
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this attempt.")
 
-        # 3. Check if already submitted
-        if attempt.status == AttemptStatus.SUBMITTED:
+        # 3. Check if already finalized
+        if attempt.status in [AttemptStatus.SUBMITTED, AttemptStatus.AUTO_SUBMITTED]:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Attempt has already been submitted.")
+        if attempt.status == AttemptStatus.TERMINATED_FOR_VIOLATION:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Attempt was terminated for policy violations.")
 
         # 4. Authoritative Server Timer Expiration Check
         now = datetime.now(UTC)
         expires_at = attempt.expires_at.replace(tzinfo=UTC) if attempt.expires_at.tzinfo is None else attempt.expires_at
         grace_period = timedelta(seconds=15)
-        if now > expires_at + grace_period:
+        if now > (expires_at + grace_period):
             attempt.status = AttemptStatus.EXPIRED
             await db.commit()
 
@@ -80,8 +85,11 @@ class EvaluationService:
         exam = attempt.exam
         questions = exam.questions
 
-        # Map candidate selections by question_id
-        selected_options_map = {ans.question_id: ans.selected_option_id for ans in submission.answers}
+        # Map candidate selections by question_id from submission payload or existing saved answers
+        if submission.answers:
+            selected_options_map = {ans.question_id: ans.selected_option_id for ans in submission.answers}
+        else:
+            selected_options_map = {ans.question_id: ans.selected_option_id for ans in attempt.answers}
 
         total_score = 0.0
         max_score = 0.0
@@ -95,14 +103,19 @@ class EvaluationService:
             max_score += q.marks
             chosen_opt_id = selected_options_map.get(q.id)
 
-            # Record answer in database
-            db_answer = StudentAnswer(
-                attempt_id=attempt.id,
-                question_id=q.id,
-                selected_option_id=chosen_opt_id,
-                recorded_at=now
-            )
-            db.add(db_answer)
+            # Check if answer record already exists
+            existing_ans = next((a for a in attempt.answers if a.question_id == q.id), None)
+            if existing_ans:
+                existing_ans.selected_option_id = chosen_opt_id
+                existing_ans.recorded_at = now
+            else:
+                db_answer = StudentAnswer(
+                    attempt_id=attempt.id,
+                    question_id=q.id,
+                    selected_option_id=chosen_opt_id,
+                    recorded_at=now
+                )
+                db.add(db_answer)
 
             # Polymorphic score evaluation
             earned = strategy.evaluate_question(q, chosen_opt_id)
@@ -139,7 +152,93 @@ class EvaluationService:
             resource_id=str(attempt.id),
             ip_address=ip_address,
             status="SUCCESS",
-            details=f"Exam '{exam.title}' submitted. Score: {total_score}/{max_score} ({percentage:.1f}%)"
+            details=f"Exam '{exam.title}' sealed. Score: {total_score}/{max_score} ({percentage:.1f}%)"
+        )
+
+        return ResultOut.model_validate(db_result)
+
+    @staticmethod
+    async def evaluate_and_seal_existing_answers(
+        db: AsyncSession,
+        attempt_id: int,
+        student: User,
+        ip_address: str | None = None,
+        is_terminated: bool = False,
+        is_auto_submit: bool = False
+    ) -> ResultOut:
+        # Check if already evaluated
+        res_check = await db.execute(select(Result).where(Result.attempt_id == attempt_id))
+        existing_result = res_check.scalars().first()
+        if existing_result:
+            return ResultOut.model_validate(existing_result)
+
+        # Fetch attempt, exam, and existing answers
+        res = await db.execute(
+            select(ExamAttempt)
+            .options(
+                selectinload(ExamAttempt.exam).selectinload(Exam.questions).selectinload(Question.options),
+                selectinload(ExamAttempt.answers)
+            )
+            .where(ExamAttempt.id == attempt_id)
+        )
+        attempt = res.scalars().first()
+        if not attempt:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam attempt not found.")
+
+        exam = attempt.exam
+        questions = exam.questions
+        now = datetime.now(UTC)
+
+        selected_options_map = {ans.question_id: ans.selected_option_id for ans in attempt.answers}
+
+        total_score = 0.0
+        max_score = 0.0
+
+        use_negative = getattr(exam, "enable_negative_marking", False)
+        strategy = EvaluationStrategyFactory.get_strategy(use_negative)
+
+        for q in questions:
+            max_score += q.marks
+            chosen_opt_id = selected_options_map.get(q.id)
+            earned = strategy.evaluate_question(q, chosen_opt_id)
+            total_score += earned
+
+        total_score = max(0.0, total_score)
+        percentage = (total_score / max_score * 100.0) if max_score > 0 else 0.0
+        passed = total_score >= exam.passing_marks
+
+        if is_terminated:
+            attempt.status = AttemptStatus.TERMINATED_FOR_VIOLATION
+            attempt.terminated_at = now
+        elif is_auto_submit:
+            attempt.status = AttemptStatus.AUTO_SUBMITTED
+
+        attempt.submitted_at = now
+
+        db_result = Result(
+            attempt_id=attempt.id,
+            student_id=student.id,
+            exam_id=exam.id,
+            total_score=round(total_score, 2),
+            max_score=round(max_score, 2),
+            percentage=round(percentage, 2),
+            passed=passed,
+            evaluated_at=now
+        )
+        db.add(db_result)
+        await db.commit()
+        await db.refresh(db_result)
+
+        status_label = "TERMINATED_FOR_VIOLATION" if is_terminated else ("AUTO_SUBMITTED" if is_auto_submit else "SUBMITTED")
+        await AuditService.log_event(
+            db=db,
+            action=f"ATTEMPT_{status_label}",
+            actor_id=student.id,
+            actor_role=student.role.value,
+            resource_id=str(attempt.id),
+            ip_address=ip_address,
+            status="SUCCESS",
+            details=f"Exam '{exam.title}' sealed ({status_label}). Score: {total_score}/{max_score} ({percentage:.1f}%)"
         )
 
         return ResultOut.model_validate(db_result)
@@ -159,4 +258,3 @@ class EvaluationService:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this result.")
 
         return ResultOut.model_validate(db_res)
-

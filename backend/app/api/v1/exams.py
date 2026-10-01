@@ -11,6 +11,7 @@ from backend.app.api.deps import (
 from backend.app.models.exam import ExamStatus
 from backend.app.models.user import User, UserRole
 from backend.app.schemas.assignment import ExamAssignmentOut, ExamAssignRequest
+from backend.app.schemas.attempt import ExamAttemptMonitorOut
 from backend.app.schemas.exam import (
     ExamCandidateOut,
     ExamCreate,
@@ -19,6 +20,7 @@ from backend.app.schemas.exam import (
     ExamUpdate,
 )
 from backend.app.schemas.question import QuestionCreate, QuestionOut
+from backend.app.services.attempt_service import AttemptService
 from backend.app.services.exam_service import ExamService
 
 router = APIRouter(prefix="/exams", tags=["Examinations"])
@@ -139,4 +141,14 @@ async def get_assignments(
     db: AsyncSession = Depends(get_db)
 ):
     return await ExamService.get_exam_assignments(db, exam_id=id, current_user=current_user)
+
+
+@router.get("/{id}/attempts", response_model=list[ExamAttemptMonitorOut])
+async def get_exam_attempts(
+    id: int,
+    current_user: User = Depends(require_roles([UserRole.FACULTY, UserRole.ADMIN])),
+    db: AsyncSession = Depends(get_db)
+):
+    return await AttemptService.get_exam_attempts(db, exam_id=id, current_user=current_user)
+
 

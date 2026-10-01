@@ -1,9 +1,17 @@
 from backend.app.schemas.assignment import ExamAssignmentOut, ExamAssignRequest
 from backend.app.schemas.attempt import (
+    AnswerAutoSaveRequest,
+    AnswerAutoSaveResponse,
     AnswerSubmissionItem,
     AttemptOut,
     AttemptStartResponse,
+    AttemptStatusResponse,
     AttemptSubmitRequest,
+    ExamAttemptMonitorOut,
+    ExamViolationOut,
+    ExamViolationRequest,
+    ExamViolationResponse,
+    SavedAnswerItem,
 )
 from backend.app.schemas.audit import AuditLogOut
 from backend.app.schemas.auth import LoginRequest, TokenPayload, TokenResponse
@@ -38,13 +46,17 @@ from backend.app.schemas.user import (
 )
 
 __all__ = [
+    "AnswerAutoSaveRequest",
+    "AnswerAutoSaveResponse",
     "AnswerSubmissionItem",
     "AttemptOut",
     "AttemptStartResponse",
+    "AttemptStatusResponse",
     "AttemptSubmitRequest",
     "AuditLogOut",
     "ExamAssignRequest",
     "ExamAssignmentOut",
+    "ExamAttemptMonitorOut",
     "ExamBase",
     "ExamCandidateOut",
     "ExamCreate",
@@ -52,6 +64,9 @@ __all__ = [
     "ExamOut",
     "ExamStatusUpdate",
     "ExamUpdate",
+    "ExamViolationOut",
+    "ExamViolationRequest",
+    "ExamViolationResponse",
     "LoginRequest",
     "OptionBase",
     "OptionCandidateOut",
@@ -64,6 +79,7 @@ __all__ = [
     "QuestionUpdate",
     "ResultDetailOut",
     "ResultOut",
+    "SavedAnswerItem",
     "TokenPayload",
     "TokenResponse",
     "UserBase",
@@ -71,5 +87,5 @@ __all__ = [
     "UserOut",
     "UserRoleUpdate",
     "UserStatusUpdate",
-    "UserUpdate"
+    "UserUpdate",
 ]

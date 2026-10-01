@@ -12,6 +12,14 @@ export interface User {
 
 export type ExamStatus = "DRAFT" | "PUBLISHED" | "CLOSED";
 
+export type AttemptStatus =
+  | "NOT_STARTED"
+  | "IN_PROGRESS"
+  | "SUBMITTED"
+  | "AUTO_SUBMITTED"
+  | "TERMINATED_FOR_VIOLATION"
+  | "EXPIRED";
+
 export interface QuestionOption {
   id: number;
   question_id: number;
@@ -38,6 +46,7 @@ export interface Exam {
   duration_minutes: number;
   total_marks: number;
   passing_marks: number;
+  enable_negative_marking?: boolean;
   status: ExamStatus;
   created_by: number;
   start_time?: string;
@@ -48,20 +57,87 @@ export interface Exam {
   questions?: Question[];
 }
 
+export interface SavedAnswerItem {
+  question_id: number;
+  selected_option_id: number | null;
+  is_marked_for_review: boolean;
+}
+
 export interface AttemptStartResponse {
   attempt_id: number;
   exam_id: number;
   exam_title: string;
   duration_minutes: number;
+  total_marks?: number;
+  enable_negative_marking?: boolean;
   started_at: string;
   expires_at: string;
   remaining_seconds: number;
+  violation_count?: number;
+  status?: AttemptStatus;
   questions: Question[];
+  saved_answers?: SavedAnswerItem[];
 }
 
 export interface StudentAnswerSubmission {
   question_id: number;
   selected_option_id: number | null;
+}
+
+export interface AnswerAutoSaveResponse {
+  status: string;
+  question_id: number;
+  selected_option_id: number | null;
+  is_marked_for_review: boolean;
+  recorded_at: string;
+}
+
+export interface ExamViolationResponse {
+  violation_count: number;
+  warning_level: number;
+  message: string;
+  is_terminated: boolean;
+  termination_reason?: string;
+  timestamp: string;
+}
+
+export interface AttemptStatusResponse {
+  attempt_id: number;
+  status: AttemptStatus;
+  remaining_seconds: number;
+  violation_count: number;
+  is_terminated: boolean;
+  termination_reason?: string;
+  expires_at: string;
+}
+
+export interface ExamViolationItem {
+  id: number;
+  attempt_id: number;
+  student_id: number;
+  student_name?: string;
+  event_type: string;
+  warning_number?: number;
+  details?: string;
+  ip_address?: string;
+  timestamp: string;
+}
+
+export interface ExamAttemptMonitor {
+  id: number;
+  student_id: number;
+  student_name: string;
+  student_email: string;
+  status: AttemptStatus;
+  started_at: string;
+  submitted_at?: string;
+  terminated_at?: string;
+  termination_reason?: string;
+  violation_count: number;
+  score?: number;
+  max_score?: number;
+  percentage?: number;
+  passed?: boolean;
 }
 
 export interface Result {
@@ -99,5 +175,3 @@ export interface ExamAssignment {
   student_email: string;
   assigned_at: string;
 }
-
-

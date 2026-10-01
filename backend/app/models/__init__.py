@@ -1,4 +1,4 @@
-from backend.app.models.attempt import AttemptStatus, ExamAttempt, StudentAnswer
+from backend.app.models.attempt import AttemptStatus, ExamAttempt, ExamViolation, StudentAnswer
 from backend.app.models.audit import AuditLog
 from backend.app.models.exam import Exam, ExamAssignment, ExamStatus
 from backend.app.models.question import Question, QuestionOption
@@ -12,6 +12,7 @@ __all__ = [
     "ExamAssignment",
     "ExamAttempt",
     "ExamStatus",
+    "ExamViolation",
     "Question",
     "QuestionOption",
     "Result",
